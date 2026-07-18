@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+
+{% block header %}Courses Management{% endblock %}
+
+{% block content %}
+<!-- Create Course Form -->
+<div class="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden mb-8">
+    <div class="px-6 py-4 border-b border-gray-100 bg-gray-50">
+        <h3 class="text-lg font-semibold text-gray-800">Create New Course</h3>
+    </div>
+    <div class="p-6">
+        <form action="/admin/courses/create" method="POST">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <div>
+                    <label class="block text-gray-700 text-sm font-bold mb-2" for="title">Course Title</label>
+                    <input class="shadow-sm appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" id="title" name="title" type="text" placeholder="e.g. Advanced Vedic Astrology" required>
+                </div>
+                <div>
+                    <label class="block text-gray-700 text-sm font-bold mb-2" for="price">Price ($)</label>
+                    <input class="shadow-sm appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" id="price" name="price" type="number" step="0.01" placeholder="99.99" required>
+                </div>
+                <div class="md:col-span-2">
+                    <label class="block text-gray-700 text-sm font-bold mb-2" for="thumbnail_url">Thumbnail Image URL (Optional)</label>
+                    <input class="shadow-sm appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" id="thumbnail_url" name="thumbnail_url" type="url" placeholder="https://...">
+                </div>
+                <div class="md:col-span-2">
+                    <label class="block text-gray-700 text-sm font-bold mb-2" for="description">Description</label>
+                    <textarea class="shadow-sm appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" id="description" name="description" rows="3" placeholder="Course description..."></textarea>
+                </div>
+            </div>
+            <div class="flex justify-end">
+                <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-6 rounded shadow-sm focus:outline-none focus:shadow-outline transition duration-150 ease-in-out">
+                    Create Course
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Courses List -->
+<div class="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden">
+    <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center">
+        <h3 class="text-lg font-semibold text-gray-800">Existing Courses</h3>
+    </div>
+    
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Title</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created At</th>
+                    <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% for c in courses %}
+                <tr class="hover:bg-gray-50">
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">#{{ c.id }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="flex items-center">
+                            {% if c.thumbnail_url %}
+                            <img src="{{ c.thumbnail_url }}" alt="" class="w-10 h-10 rounded mr-3 object-cover">
+                            {% else %}
+                            <div class="w-10 h-10 rounded mr-3 bg-gray-200 flex items-center justify-center">
+                                <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                            </div>
+                            {% endif %}
+                            <div class="text-sm font-medium text-gray-900">{{ c.title }}</div>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
+                        ${{ "%.2f"|format(c.price) }}
+                        {% if c.discount_price %}
+                            <span class="text-xs text-green-500 ml-2">(Sale: ${{ "%.2f"|format(c.discount_price) }})</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ c.created_at.strftime('%Y-%m-%d %H:%M') if c.created_at else 'N/A' }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <a href="/admin/courses/edit/{{ c.id }}" class="text-indigo-600 hover:text-indigo-900 mx-2">Edit</a>
+                        <a href="/admin/courses/delete/{{ c.id }}" class="text-red-600 hover:text-red-900 mx-2" onclick="return confirm('Are you sure you want to delete this course?')">Delete</a>
+                    </td>
+                </tr>
+                {% endfor %}
+                
+                {% if not courses %}
+                <tr>
+                    <td colspan="5" class="px-6 py-10 text-center text-gray-500">No courses available. Create one above!</td>
+                </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

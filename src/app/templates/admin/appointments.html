@@ -1,0 +1,317 @@
+{% extends "base.html" %}
+
+{% block header %}Consultation Agenda{% endblock %}
+
+{% block content %}
+<div class="mb-6 flex justify-between items-end">
+    <div>
+        <h2 class="text-2xl font-bold text-gray-800">Manage Appointments</h2>
+        <p class="text-gray-500 text-sm mt-1">Review pending requests, manage upcoming, and upload reports.</p>
+    </div>
+</div>
+
+<!-- KPI Cards -->
+{% set total_apt = appointments|length %}
+{% set pending_apt = appointments|selectattr('status', 'equalto', 'pending')|list|length %}
+{% set scheduled_apt = appointments|selectattr('status', 'equalto', 'scheduled')|list|length %}
+{% set completed_apt = appointments|selectattr('status', 'equalto', 'completed')|list|length %}
+
+<div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+    <div class="bg-white rounded-lg shadow-sm p-6 border border-gray-100 flex items-center">
+        <div>
+            <h3 class="text-gray-500 text-xs font-semibold uppercase tracking-wider">Total</h3>
+            <p class="text-2xl font-bold text-gray-900">{{ total_apt }}</p>
+        </div>
+    </div>
+    
+    <div class="bg-white rounded-lg shadow-sm p-6 border border-orange-200 flex items-center">
+        <div>
+            <h3 class="text-orange-600 text-xs font-semibold uppercase tracking-wider">Pending Acceptance</h3>
+            <p class="text-2xl font-bold text-orange-900">{{ pending_apt }}</p>
+        </div>
+    </div>
+    
+    <div class="bg-white rounded-lg shadow-sm p-6 border border-blue-200 flex items-center">
+        <div>
+            <h3 class="text-blue-600 text-xs font-semibold uppercase tracking-wider">Upcoming (Scheduled)</h3>
+            <p class="text-2xl font-bold text-blue-900">{{ scheduled_apt }}</p>
+        </div>
+    </div>
+    
+    <div class="bg-white rounded-lg shadow-sm p-6 border border-green-200 flex items-center">
+        <div>
+            <h3 class="text-green-600 text-xs font-semibold uppercase tracking-wider">Completed</h3>
+            <p class="text-2xl font-bold text-green-900">{{ completed_apt }}</p>
+        </div>
+    </div>
+</div>
+
+<!-- Tabs Navigation -->
+<div class="border-b border-gray-200 mb-6">
+    <nav class="-mb-px flex space-x-8" aria-label="Tabs">
+        <button onclick="switchTab('pending')" id="btn-pending" class="border-orange-500 text-orange-600 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
+            Action Required
+            <span class="bg-orange-100 text-orange-600 ml-2 py-0.5 px-2.5 rounded-full text-xs">{{ pending_apt }}</span>
+        </button>
+        <button onclick="switchTab('scheduled')" id="btn-scheduled" class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
+            Upcoming Agenda
+            <span class="bg-blue-100 text-blue-600 ml-2 py-0.5 px-2.5 rounded-full text-xs">{{ scheduled_apt }}</span>
+        </button>
+        <button onclick="switchTab('all')" id="btn-all" class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
+            All Appointments
+            <span class="bg-gray-100 text-gray-900 ml-2 py-0.5 px-2.5 rounded-full text-xs">{{ total_apt }}</span>
+        </button>
+    </nav>
+</div>
+
+<!-- Pending Tab Content -->
+<div id="tab-pending" class="space-y-8 block">
+    {% set pending_list = appointments|selectattr('status', 'equalto', 'pending')|list %}
+    {% if not pending_list %}
+        <div class="bg-white rounded-lg shadow-sm border border-gray-100 p-10 text-center">
+            <h3 class="text-sm font-medium text-gray-900">No pending appointments</h3>
+            <p class="mt-1 text-sm text-gray-500">You have no new requests to review.</p>
+        </div>
+    {% else %}
+        {% for date, day_appointments in pending_list|groupby('scheduled_date') %}
+        <div class="bg-white rounded-lg shadow-sm border border-orange-200 overflow-hidden">
+            <div class="bg-orange-50 px-6 py-4 border-b border-orange-100 flex items-center">
+                <h3 class="text-lg font-bold text-orange-900">{{ date.strftime('%A, %B %d, %Y') }}</h3>
+            </div>
+            <ul class="divide-y divide-gray-100">
+                {% for a in day_appointments %}
+                <li class="p-6 hover:bg-gray-50 transition duration-150">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center w-1/4">
+                            <div class="text-right mr-4">
+                                <div class="text-lg font-bold text-gray-900">{{ a.scheduled_start_time.strftime('%I:%M %p') }}</div>
+                            </div>
+                        </div>
+                        <div class="w-1/3 px-4 border-l border-gray-100">
+                            <p class="text-sm font-bold text-gray-900">{{ a.user.name if a.user else 'Unknown User' }}</p>
+                            <p class="text-xs text-gray-500">{{ a.service.name if a.service else 'Consultation' }}</p>
+                        </div>
+                        <div class="pl-4 border-l border-gray-100 flex items-center justify-end gap-2">
+                            <form action="/admin/appointments/{{ a.id }}/accept" method="POST">
+                                <button type="submit" class="bg-orange-500 hover:bg-orange-600 text-white font-semibold py-1.5 px-4 rounded shadow-sm text-sm transition duration-150">
+                                    Accept
+                                </button>
+                            </form>
+                            <form action="/admin/appointments/{{ a.id }}/delete" method="POST" onsubmit="return confirm('Reject this consultation permanently?');">
+                                <button type="submit" class="bg-white hover:bg-red-50 text-red-600 font-semibold py-1.5 px-3 rounded border border-red-200 text-sm transition duration-150">
+                                    Reject
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endfor %}
+    {% endif %}
+</div>
+
+<!-- Scheduled Tab Content -->
+<div id="tab-scheduled" class="space-y-8 hidden">
+    {% set scheduled_list = appointments|selectattr('status', 'equalto', 'scheduled')|list %}
+    {% if not scheduled_list %}
+        <div class="bg-white rounded-lg shadow-sm border border-gray-100 p-10 text-center">
+            <h3 class="text-sm font-medium text-gray-900">No scheduled appointments</h3>
+            <p class="mt-1 text-sm text-gray-500">You're all caught up!</p>
+        </div>
+    {% else %}
+        {% for date, day_appointments in scheduled_list|groupby('scheduled_date') %}
+        <div class="bg-white rounded-lg shadow-sm border border-blue-200 overflow-hidden">
+            <div class="bg-blue-50 px-6 py-4 border-b border-blue-100 flex items-center">
+                <h3 class="text-lg font-bold text-blue-900">{{ date.strftime('%A, %B %d, %Y') }}</h3>
+            </div>
+            <ul class="divide-y divide-gray-100">
+                {% for a in day_appointments %}
+                <li class="p-6 hover:bg-gray-50 transition duration-150">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center w-1/4">
+                            <div class="text-right mr-4">
+                                <div class="text-lg font-bold text-gray-900">{{ a.scheduled_start_time.strftime('%I:%M %p') }}</div>
+                            </div>
+                        </div>
+                        <div class="w-1/3 px-4 border-l border-gray-100">
+                            <p class="text-sm font-bold text-gray-900">{{ a.user.name if a.user else 'Unknown User' }}</p>
+                            <p class="text-xs text-gray-500">{{ a.service.name if a.service else 'Consultation' }}</p>
+                        </div>
+                        <div class="pl-4 border-l border-gray-100 flex items-center justify-end gap-2">
+                            <form action="/admin/appointments/{{ a.id }}/complete" method="POST" onsubmit="return confirm('Mark this consultation as completed?');">
+                                <button type="submit" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-semibold py-1.5 px-3 rounded border border-indigo-200 text-sm transition duration-150">
+                                    Mark Completed
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endfor %}
+    {% endif %}
+</div>
+
+<!-- All Appointments Tab Content -->
+<div id="tab-all" class="space-y-8 hidden">
+    {% if not appointments %}
+        <div class="bg-white rounded-lg shadow-sm border border-gray-100 p-10 text-center">
+            <h3 class="text-sm font-medium text-gray-900">No appointments found</h3>
+        </div>
+    {% else %}
+        {% for date, day_appointments in appointments|groupby('scheduled_date') %}
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden opacity-90">
+            <div class="bg-gray-50 px-6 py-4 border-b border-gray-200 flex items-center">
+                <h3 class="text-lg font-bold text-gray-700">{{ date.strftime('%A, %B %d, %Y') }}</h3>
+            </div>
+            <ul class="divide-y divide-gray-100">
+                {% for a in day_appointments %}
+                <li class="p-6 hover:bg-gray-50 transition duration-150">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center w-1/4">
+                            <div class="text-right mr-4">
+                                <div class="text-lg font-bold text-gray-700">{{ a.scheduled_start_time.strftime('%I:%M %p') }}</div>
+                            </div>
+                            <div>
+                                {% if a.status == 'scheduled' %}
+                                    <span class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">Scheduled</span>
+                                {% elif a.status == 'completed' %}
+                                    <span class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Completed</span>
+                                {% elif a.status == 'cancelled' %}
+                                    <span class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">Cancelled</span>
+                                {% else %}
+                                    <span class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">Pending</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="w-1/4 px-4 border-l border-gray-100">
+                            <p class="text-sm font-bold text-gray-700">{{ a.user.name if a.user else 'Unknown User' }}</p>
+                        </div>
+                        
+                        <!-- Consultation Files -->
+                        <div class="flex-1 px-4 border-l border-gray-100">
+                            {% if a.status == 'completed' %}
+                                <div class="flex flex-col gap-1 items-start">
+                                    <span class="text-xs text-gray-500 font-semibold">{{ a.files|length }} Attachments</span>
+                                    <button onclick="document.getElementById('modal-{{ a.id }}').classList.remove('hidden')" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-semibold py-1 px-2 rounded border border-indigo-200 text-[10px] transition duration-150">
+                                        Manage Attachments
+                                    </button>
+                                </div>
+                                
+                                <!-- Attachments Modal -->
+                                <div id="modal-{{ a.id }}" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 hidden">
+                                    <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+                                        <div class="flex justify-between items-center mb-4">
+                                            <h3 class="text-lg leading-6 font-medium text-gray-900">Attachments for {{ a.user.name if a.user else 'Unknown' }}</h3>
+                                            <button onclick="document.getElementById('modal-{{ a.id }}').classList.add('hidden')" class="text-gray-400 hover:text-gray-500">
+                                                <span class="text-2xl">&times;</span>
+                                            </button>
+                                        </div>
+                                        
+                                        <!-- List existing files -->
+                                        <div class="mb-4 max-h-40 overflow-y-auto space-y-1">
+                                            {% for file in a.files %}
+                                            <div class="flex items-center justify-between bg-gray-50 p-2 rounded border border-gray-200">
+                                                <a href="{{ file.file_url }}" target="_blank" class="text-xs text-indigo-600 hover:underline font-semibold flex items-center truncate">
+                                                    {% if file.is_external %}
+                                                    <svg class="w-4 h-4 mr-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path></svg>
+                                                    {% else %}
+                                                    <svg class="w-4 h-4 mr-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                                                    {% endif %}
+                                                    {{ file.name }}
+                                                </a>
+                                                <form action="/admin/appointments/files/{{ file.id }}/delete" method="POST" class="inline" onsubmit="return confirm('Delete this attachment?');">
+                                                    <button type="submit" class="text-red-500 hover:text-red-700 text-lg leading-none">&times;</button>
+                                                </form>
+                                            </div>
+                                            {% else %}
+                                            <p class="text-xs text-gray-500 italic">No attachments yet.</p>
+                                            {% endfor %}
+                                        </div>
+                                        
+                                        <!-- Add new file forms -->
+                                        <div class="bg-gray-50 p-3 rounded border border-gray-200">
+                                            <div class="text-xs font-bold text-gray-700 uppercase tracking-wider mb-3">Add New</div>
+                                            <!-- File Upload Form -->
+                                            <form action="/admin/appointments/{{ a.id }}/add_file" method="POST" enctype="multipart/form-data" class="mb-3">
+                                                <input type="text" name="name" placeholder="File Name (e.g., Chart)" required class="text-sm w-full mb-2 p-2 border border-gray-300 rounded focus:ring-1 focus:ring-indigo-500">
+                                                <div class="flex gap-2">
+                                                    <input type="file" name="file" required class="text-xs w-full text-gray-500 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-xs file:bg-indigo-50 file:text-indigo-700"/>
+                                                    <button type="submit" class="bg-indigo-600 text-white px-3 py-1 rounded text-sm font-medium">Upload</button>
+                                                </div>
+                                            </form>
+                                            <!-- URL Form -->
+                                            <form action="/admin/appointments/{{ a.id }}/add_file" method="POST" class="border-t border-gray-200 pt-3">
+                                                <input type="text" name="name" placeholder="Link Name (e.g., Video)" required class="text-sm w-full mb-2 p-2 border border-gray-300 rounded focus:ring-1 focus:ring-indigo-500">
+                                                <div class="flex gap-2">
+                                                    <input type="url" name="url" placeholder="https://..." required class="text-sm w-full p-2 border border-gray-300 rounded focus:ring-1 focus:ring-indigo-500">
+                                                    <button type="submit" class="bg-indigo-600 text-white px-3 py-1 rounded text-sm font-medium">Add</button>
+                                                </div>
+                                            </form>
+                                        </div>
+                                        <div class="mt-4 flex justify-end">
+                                            <button onclick="document.getElementById('modal-{{ a.id }}').classList.add('hidden')" class="bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold py-1.5 px-4 rounded text-sm transition duration-150">
+                                                Done
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="pl-4 border-l border-gray-100 flex items-center justify-end">
+                            <form action="/admin/appointments/{{ a.id }}/delete" method="POST" onsubmit="return confirm('Delete this consultation permanently?');">
+                                <button type="submit" class="text-red-500 hover:text-red-700 text-xs font-semibold">Delete</button>
+                            </form>
+                        </div>
+                    </div>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endfor %}
+    {% endif %}
+</div>
+
+<script>
+    function switchTab(tabId) {
+        // Reset classes
+        const baseClass = "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm";
+        document.getElementById('btn-pending').className = baseClass;
+        document.getElementById('btn-scheduled').className = baseClass;
+        document.getElementById('btn-all').className = baseClass;
+        
+        ['pending', 'scheduled', 'all'].forEach(id => {
+            document.getElementById('tab-' + id).classList.add('hidden');
+            document.getElementById('tab-' + id).classList.remove('block');
+        });
+        
+        // Activate selected tab
+        let activeClass = "";
+        if (tabId === 'pending') activeClass = "border-orange-500 text-orange-600 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm";
+        if (tabId === 'scheduled') activeClass = "border-blue-500 text-blue-600 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm";
+        if (tabId === 'all') activeClass = "border-indigo-500 text-indigo-600 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm";
+        
+        document.getElementById('btn-' + tabId).className = activeClass;
+        document.getElementById('tab-' + tabId).classList.remove('hidden');
+        document.getElementById('tab-' + tabId).classList.add('block');
+    }
+    
+    document.addEventListener("DOMContentLoaded", function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const openModalId = urlParams.get('open_attachments');
+        if (openModalId) {
+            // Automatically switch to All tab if an attachment is requested
+            switchTab('all');
+            // Unhide the specific modal
+            const modal = document.getElementById('modal-' + openModalId);
+            if (modal) {
+                modal.classList.remove('hidden');
+            }
+        }
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add New Catalogue Item</title>
+    <style>
+        :root {
+            --primary-color: #4a6fa5;
+            --secondary-color: #166088;
+            --accent-color: #4cb5ae;
+            --text-color: #333;
+            --light-gray: #f5f5f5;
+            --medium-gray: #e0e0e0;
+            --dark-gray: #666;
+            --white: #ffffff;
+            --shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        html, body {
+            height: 100%;
+        }
+        
+        body {
+            color: var(--text-color);
+            background-color: var(--light-gray);
+            line-height: 1.6;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+        
+        /* Header Styles */
+        header {
+            background-color: var(--primary-color);
+            color: var(--white);
+            padding: 1rem 2rem;
+            box-shadow: var(--shadow);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+        
+        nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+        
+        .nav-links {
+            display: flex;
+            list-style: none;
+        }
+        
+        .nav-links li {
+            margin-left: 1.5rem;
+        }
+        
+        .nav-links a {
+            color: var(--white);
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+        
+        .nav-links a:hover {
+            color: var(--medium-gray);
+        }
+        
+        /* Main Content */
+        main {
+            max-width: 800px;
+            width: 100%;
+            margin: 2rem auto;
+            padding: 0 1rem;
+            flex: 1 0 auto; /* Makes main take up available space */
+        }
+        
+        .page-header {
+            margin-bottom: 2rem;
+        }
+        
+        h1 {
+            color: var(--secondary-color);
+        }
+        
+        /* Form Styles */
+        .form-container {
+            background-color: var(--white);
+            border-radius: 8px;
+            box-shadow: var(--shadow);
+            padding: 2rem;
+        }
+        
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: var(--secondary-color);
+        }
+        
+        .form-control {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid var(--medium-gray);
+            border-radius: 4px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+        
+        .form-control:focus {
+            outline: none;
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 2px rgba(76, 181, 174, 0.2);
+        }
+        
+        textarea.form-control {
+            min-height: 120px;
+            resize: vertical;
+        }
+        
+        .form-actions {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 2rem;
+        }
+        
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border-radius: 4px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: none;
+        }
+        
+        .btn-primary {
+            background-color: var(--accent-color);
+            color: var(--white);
+        }
+        
+        .btn-primary:hover {
+            background-color: #3da096;
+        }
+        
+        .btn-secondary {
+            background-color: var(--medium-gray);
+            color: var(--text-color);
+        }
+        
+        .btn-secondary:hover {
+            background-color: #d0d0d0;
+        }
+        
+        /* Form Validation */
+        .form-control:invalid {
+            border-color: #f44336;
+        }
+        
+        /* Preview Image */
+        .thumbnail-preview {
+            width: 120px;
+            height: 120px;
+            background-color: var(--medium-gray);
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-top: 0.5rem;
+            overflow: hidden;
+        }
+        
+        .thumbnail-preview img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: cover;
+        }
+        
+        /* Footer */
+        footer {
+            background-color: var(--secondary-color);
+            color: var(--white);
+            text-align: center;
+            padding: 1.5rem;
+            flex-shrink: 0; /* Prevent footer from shrinking */
+            width: 100%;
+        }
+        
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            nav {
+                flex-direction: column;
+                gap: 1rem;
+            }
+            
+            .nav-links {
+                width: 100%;
+                justify-content: space-around;
+            }
+            
+            .nav-links li {
+                margin-left: 0;
+            }
+            
+            .form-actions {
+                flex-direction: column;
+                gap: 1rem;
+            }
+            
+            .btn {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header with Navigation -->
+    <header>
+        <nav>
+            <div class="logo">Modern Catalogue</div>
+            <ul class="nav-links">
+                <li><a href="/">Home</a></li>
+                <li><a href="#">Categories</a></li>
+                <li><a href="#">About</a></li>
+                <li><a href="#">Contact</a></li>
+            </ul>
+        </nav>
+    </header>
+    
+    <!-- Main Content -->
+    <main>
+        <div class="page-header">
+            <h1>Add New Item</h1>
+        </div>
+        
+        <!-- Form Container -->
+        <div class="form-container">
+            <form id="addItemForm" onsubmit="addItem(event)">
+                <div class="form-group">
+                    <label for="id">ID</label>
+                    <input type="text" id="id" name="id" class="form-control" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="title">Title</label>
+                    <input type="text" id="title" name="title" class="form-control" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="genre">Genre (comma-separated)</label>
+                    <input type="text" id="genre" name="genre" class="form-control" 
+                           placeholder="e.g., Action, Drama, Sci-Fi" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="year">Year</label>
+                    <input type="text" id="year" name="year" class="form-control" 
+                           required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="thumbnail">Thumbnail URL</label>
+                    <input type="url" id="thumbnail" name="thumbnail" class="form-control" 
+                           placeholder="https://example.com/image.jpg" onchange="previewImage()">
+                    <div class="thumbnail-preview" id="thumbnailPreview">
+                        <span>Image preview</span>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="description">Description</label>
+                    <textarea id="description" name="description" class="form-control" required></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="description">URL</label>
+                    <textarea id="description" name="url" class="form-control" required></textarea>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="window.location.href='/'">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Add Item</button>
+                </div>
+            </form>
+        </div>
+    </main>
+    
+    <!-- Footer -->
+    <footer>
+        <p>&copy; 2025 Modern Catalogue. All rights reserved.</p>
+    </footer>
+    
+    <script>
+        // Add item function
+        async function addItem(event) {
+            event.preventDefault();
+            
+            try {
+                const formData = new FormData(event.target);
+                const data = Object.fromEntries(formData.entries());
+                
+                // Process genre as array
+                data.genre = data.genre.split(',').map(g => g.trim()).filter(g => g); 
+                
+                // Validate year as number
+                data.year = data.year;
+                
+                // Add default thumbnail if not provided
+                if (!data.thumbnail) {
+                    data.thumbnail = 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSYdegKu0S8BLADKA0D34IuLphlPgUQ3dRXkw&s';
+                }
+                
+                console.log( JSON.stringify(data))
+                const response = await fetch('/add_item', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                
+                if (!response.ok) {
+                    return response.json().then(error => {
+                       throw new Error(error.detail); // Extracts the "detail" field
+                  });
+                }
+                
+                // Show success message and redirect
+                alert('Item added successfully!');
+                window.location.href = '/';
+                
+            } catch (error) {
+                console.error('Error adding item:', error);
+                alert('Failed to add item. Please try again.');
+            }
+        }
+        
+        // Preview image when URL is entered
+        function previewImage() {
+            const thumbnailInput = document.getElementById('thumbnail');
+            const thumbnailPreview = document.getElementById('thumbnailPreview');
+            
+            if (thumbnailInput.value && thumbnailInput.validity.valid) {
+                thumbnailPreview.innerHTML = `<img src="${thumbnailInput.value}" alt="Preview">`;
+            } else {
+                thumbnailPreview.innerHTML = `<span>Image preview</span>`;
+            }
+        }
+        
+        // Form validation
+        document.addEventListener('DOMContentLoaded', function() {
+            // Set current year as default
+            const yearInput = document.getElementById('year');
+            yearInput.value = new Date().getFullYear();
+            
+            // Real-time validation
+            const inputs = document.querySelectorAll('.form-control');
+            inputs.forEach(input => {
+                input.addEventListener('blur', function() {
+                    if (!this.validity.valid) {
+                        this.classList.add('invalid');
+                    } else {
+                        this.classList.remove('invalid');
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>

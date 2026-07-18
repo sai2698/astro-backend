@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block header %}Edit Video: {{ lecture.title }}{% endblock %}
+
+{% block content %}
+<div class="mb-6 flex justify-between items-center">
+    <a href="/admin/courses/edit/{{ course_id }}" class="text-indigo-600 hover:text-indigo-800 font-medium flex items-center">
+        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+        Back to Course Curriculum
+    </a>
+</div>
+
+<div class="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden mb-8 max-w-4xl">
+    <div class="px-6 py-4 border-b border-gray-100 bg-gray-50">
+        <h3 class="text-lg font-semibold text-gray-800">Edit Video Details</h3>
+    </div>
+    <div class="p-6">
+        <form action="/admin/lectures/edit/{{ lecture.id }}" method="POST">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <div class="md:col-span-2">
+                    <label class="block text-gray-700 text-sm font-bold mb-2" for="title">Video Title</label>
+                    <input class="shadow-sm appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-indigo-500" id="title" name="title" type="text" value="{{ lecture.title }}" required>
+                </div>
+                <div class="md:col-span-2">
+                    <label class="block text-gray-700 text-sm font-bold mb-2" for="video_url">Video URL (MP4, HLS, etc.)</label>
+                    <input class="shadow-sm appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-indigo-500" id="video_url" name="video_url" type="url" value="{{ lecture.video_url }}" required>
+                </div>
+                <div>
+                    <label class="block text-gray-700 text-sm font-bold mb-2" for="duration_seconds">Duration (Seconds)</label>
+                    <input class="shadow-sm appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-indigo-500" id="duration_seconds" name="duration_seconds" type="number" value="{{ lecture.duration_seconds }}" required>
+                    <p class="text-xs text-gray-500 mt-1">This is displayed as {{ (lecture.duration_seconds / 60)|int }}m {{ lecture.duration_seconds % 60 }}s</p>
+                </div>
+                <div class="flex items-center">
+                    <label class="flex items-center text-sm font-bold text-gray-700 cursor-pointer pt-6">
+                        <input name="is_preview" type="checkbox" value="true" class="mr-2 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded" {% if lecture.is_preview %}checked{% endif %}>
+                        Set as Free Preview Video
+                    </label>
+                </div>
+            </div>
+            <div class="flex justify-end border-t pt-4">
+                <a href="/admin/courses/edit/{{ course_id }}" class="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 font-bold py-2 px-6 rounded shadow-sm focus:outline-none transition duration-150 mr-4">
+                    Cancel
+                </a>
+                <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-6 rounded shadow-sm focus:outline-none transition duration-150">
+                    Save Changes
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

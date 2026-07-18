@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>StreamFlix</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background-color: #141414;
+            color: #fff;
+        }
+
+        header {
+            padding: 20px;
+            font-size: 2em;
+            background-color: #000;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 20px;
+            padding: 20px;
+        }
+
+        .movie-card {
+            background-color: #222;
+            border-radius: 10px;
+            overflow: hidden;
+            transition: transform 0.3s ease;
+        }
+
+        .movie-card:hover {
+            transform: scale(1.05);
+        }
+
+        .thumbnail {
+            width: 100%;
+            height: 320px;
+            object-fit: cover;
+        }
+
+        .movie-info {
+            padding: 10px;
+        }
+
+        .title {
+            font-size: 1.1em;
+            margin: 0;
+            color: #fff;
+        }
+
+        .meta {
+            font-size: 0.85em;
+            color: #aaa;
+            margin-top: 4px;
+        }
+
+        .desc {
+            margin-top: 8px;
+            font-size: 0.9em;
+            color: #ccc;
+        }
+
+        a {
+            text-decoration: none;
+            color: inherit;
+        }
+    </style>
+</head>
+<body>
+    <header>StreamFlix</header>
+
+    <div class="grid">
+        {% for movie in movies %}
+        <a href="/watch/{{ movie.id }}">
+            <div class="movie-card">
+                <img class="thumbnail" src="{{ movie.thumbnail }}" alt="{{ movie.title }}">
+                <div class="movie-info">
+                    <p class="title">{{ movie.title }}</p>
+                    <p class="meta">{{ movie.genre | join(', ') }} | {{ movie.year }}</p>
+                    <p class="desc">{{ movie.description[:80] }}{% if movie.description|length > 80 %}...{% endif %}</p>
+                </div>
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+</body>
+</html>

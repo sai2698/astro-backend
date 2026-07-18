@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ movie.title }} | StreamFlix</title>
+    <style>
+        body {
+            margin: 0;
+            background-color: #000;
+            color: white;
+            font-family: Arial, sans-serif;
+        }
+
+        .container {
+            padding: 20px;
+            max-width: 900px;
+            margin: auto;
+        }
+
+        h1 {
+            margin-bottom: 5px;
+        }
+
+        .meta {
+            color: #aaa;
+            font-size: 0.9em;
+            margin-bottom: 15px;
+        }
+
+        video {
+            width: 100%;
+            max-height: 500px;
+            border-radius: 10px;
+            background-color: #000;
+            margin-bottom: 20px;
+            cursor: pointer;
+        }
+
+        .description {
+            line-height: 1.5;
+            font-size: 1em;
+        }
+
+        a.back-link {
+            color: #ff4747;
+            text-decoration: none;
+            display: inline-block;
+            margin-bottom: 20px;
+        }
+
+        a.back-link:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <a href="/home" class="back-link">← Back to Home</a>
+        <h1>{{ movie.title }}</h1>
+        <div class="meta">{{ movie.genre | join(', ') }} | {{ movie.year }}</div>
+
+        <!-- Video element for MKV playback -->
+        <video id="videoPlayer" controls poster="{{ movie.thumbnail }}">
+            <source src="{{ movie.url }}" type="video/webm">
+            <source src="{{ movie.url }}" type="video/mp4">
+            Your browser does not support the video tag.
+        </video>
+
+        <div class="description">{{ movie.description }}</div>
+    </div>
+
+    <!-- Fullscreen toggle script -->
+    <script>
+        const video = document.getElementById('videoPlayer');
+
+        video.addEventListener('dblclick', () => {
+            if (document.fullscreenElement) {
+                document.exitFullscreen();
+            } else {
+                video.requestFullscreen();
+            }
+        });
+    </script>
+</body>
+</html>
