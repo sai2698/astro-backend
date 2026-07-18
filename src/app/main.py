@@ -42,4 +42,5 @@ try:
 except OSError:
     pass  # Serverless environments like Vercel have read-only filesystems
 
-app.mount("/static", StaticFiles(directory=static_dir), name="static")
+if os.path.isdir(static_dir):
+    app.mount("/static", StaticFiles(directory=static_dir), name="static")
