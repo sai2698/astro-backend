@@ -12,3 +12,5 @@ redis==5.0.4
 celery==5.4.0
 psycopg2-binary==2.9.9
 jinja2==3.1.6
+razorpay==2.0.1
+agora_token_builder==1.0.0
