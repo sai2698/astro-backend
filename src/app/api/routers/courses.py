@@ -20,7 +20,7 @@ def generate_signed_url(video_url: str) -> str:
         return ""
     if video_url.startswith("http://"):
         video_url = video_url.replace("http://", "https://")
-    return f"{video_url}?sig=mock_signature&expires=mock_expiry"
+    return video_url
 
 @router.get("/", response_model=List[Course])
 async def list_courses(
@@ -41,6 +41,7 @@ async def list_courses(
     if search:
         query = query.filter(CourseModel.title.ilike(f"%{search}%"))
         
+    query = query.order_by(CourseModel.id.asc())
     result = await db.execute(query.offset(skip).limit(limit))
     courses = result.scalars().all()
     
@@ -104,6 +105,11 @@ async def get_course(
         lp_res = await db.execute(lp_query)
         for lp in lp_res.scalars().all():
             lecture_progresses[lp.lecture_id] = lp.progress_percent
+
+    # Ensure explicit sorting by order_index just in case DB relationships cache unordered data
+    course.sections.sort(key=lambda s: s.order_index)
+    for section in course.sections:
+        section.lectures.sort(key=lambda l: l.order_index)
 
     # Process signed URLs and progress
     for section in course.sections:

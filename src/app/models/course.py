@@ -34,7 +34,7 @@ class Course(Base):
 
     category = relationship("Category", back_populates="courses")
     instructor = relationship("User")
-    sections = relationship("CourseSection", back_populates="course", cascade="all, delete-orphan")
+    sections = relationship("CourseSection", back_populates="course", cascade="all, delete-orphan", order_by="CourseSection.order_index")
     reviews = relationship("CourseReview", back_populates="course", cascade="all, delete-orphan")
 
 class CourseSection(Base):
@@ -46,7 +46,7 @@ class CourseSection(Base):
     order_index = Column(Integer, default=0)
 
     course = relationship("Course", back_populates="sections")
-    lectures = relationship("Lecture", back_populates="section", cascade="all, delete-orphan")
+    lectures = relationship("Lecture", back_populates="section", cascade="all, delete-orphan", order_by="Lecture.order_index")
 
 class Lecture(Base):
     __tablename__ = "lectures"

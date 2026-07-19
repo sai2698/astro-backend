@@ -15,13 +15,29 @@ from app.core.security import create_access_token
 from app.models.user import User
 from app.models.course import Course, CourseSection, Lecture
 from app.models.enrollment import Enrollment, LectureProgress
-from app.models.appointment import Appointment, ServiceType, AstrologerAvailability, AstrologerProfile, ConsultationFile
+from app.models.appointment import Appointment, ServiceType, AstrologerAvailability, AstrologerProfile, ConsultationFile, ExpertCalendarDay
+from app.api.routers.utils import ensure_upcoming_3_days_generated
 from app.api.deps import get_admin_user_cookie
 from app.core.security import verify_password
 from app.core.config import settings
-from datetime import timedelta, date, time
+from datetime import timedelta, date, time, datetime
 
 router = APIRouter()
+
+async def cleanup_expired_slots(db: AsyncSession):
+    # Delete slots in the past that are not booked
+    # We use a raw query or fetch and delete. For sqlite/postgres cross compatibility:
+    result = await db.execute(select(AstrologerAvailability).filter(AstrologerAvailability.is_booked == False))
+    slots = result.scalars().all()
+    now = datetime.now()
+    for slot in slots:
+        try:
+            slot_dt = datetime.combine(slot.specific_date, slot.start_time)
+            if slot_dt < now:
+                await db.delete(slot)
+        except Exception:
+            pass
+    await db.commit()
 
 # Setup templates
 templates = Jinja2Templates(directory=os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "templates", "admin"))
@@ -158,7 +174,7 @@ async def view_courses(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_admin_user_cookie)
 ):
-    result = await db.execute(select(Course).order_by(Course.id.desc()))
+    result = await db.execute(select(Course).order_by(Course.id.asc()))
     courses = result.scalars().all()
     return templates.TemplateResponse("courses.html", {"request": request, "user": current_user, "courses": courses})
 
@@ -518,6 +534,7 @@ async def create_service(
     description: str = Form(""),
     duration_minutes: int = Form(30),
     base_price: float = Form(0.0),
+    category: str = Form("consultation"),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_admin_user_cookie)
 ):
@@ -525,7 +542,8 @@ async def create_service(
         name=name,
         description=description,
         duration_minutes=duration_minutes,
-        base_price=base_price
+        base_price=base_price,
+        category=category
     )
     db.add(new_service)
     await db.commit()
@@ -552,6 +570,7 @@ async def edit_service_post(
     description: str = Form(""),
     duration_minutes: int = Form(30),
     base_price: float = Form(0.0),
+    category: str = Form("consultation"),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_admin_user_cookie)
 ):
@@ -564,6 +583,7 @@ async def edit_service_post(
     service.description = description
     service.duration_minutes = duration_minutes
     service.base_price = base_price
+    service.category = category
     
     await db.commit()
     return RedirectResponse(url="/admin/services", status_code=status.HTTP_303_SEE_OTHER)
@@ -587,27 +607,90 @@ async def view_astrologers(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_admin_user_cookie)
 ):
-    astrologers_result = await db.execute(select(AstrologerProfile).options(selectinload(AstrologerProfile.user)))
+    astrologers_result = await db.execute(select(AstrologerProfile).options(selectinload(AstrologerProfile.user), selectinload(AstrologerProfile.astrologer_services)).filter(AstrologerProfile.profile_type == 'astrologer'))
     astrologers = astrologers_result.scalars().all()
+    
+    # Get users who don't have an astrologer profile yet to show in the create dropdown
+    existing_astro_ids = [a.user_id for a in astrologers]
+    if existing_astro_ids:
+        users_result = await db.execute(select(User).filter(User.id.not_in(existing_astro_ids)))
+    else:
+        users_result = await db.execute(select(User))
+    eligible_users = users_result.scalars().all()
     
     return templates.TemplateResponse("astrologers.html", {
         "request": request, 
         "user": current_user, 
-        "astrologers": astrologers
+        "astrologers": astrologers,
+        "eligible_users": eligible_users
     })
+
+@router.post("/astrologers/create")
+async def create_astrologer(
+    request: Request,
+    user_id: int = Form(...),
+    bio: str = Form(""),
+    experience_years: int = Form(0),
+    price_per_session: float = Form(0.0),
+    profile_type: str = Form("astrologer"),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_admin_user_cookie)
+):
+    form_data = await request.form()
+    service_names = form_data.getlist("service_names[]")
+    service_durations = form_data.getlist("service_durations[]")
+    service_prices = form_data.getlist("service_prices[]")
+
+    new_profile = AstrologerProfile(
+        user_id=user_id,
+        bio=bio,
+        experience_years=experience_years,
+        price_per_session=price_per_session,
+        profile_type=profile_type,
+        rating_avg=0.0,
+        is_available=True
+    )
+    db.add(new_profile)
+    await db.flush()
+
+    from app.models.appointment import AstrologerService
+    for i in range(len(service_names)):
+        name = service_names[i].strip()
+        if name:
+            dur_str = service_durations[i] if i < len(service_durations) else "30"
+            price_str = service_prices[i] if i < len(service_prices) else "0"
+            try:
+                dur = int(dur_str)
+            except ValueError:
+                dur = 30
+            try:
+                price = float(price_str)
+            except ValueError:
+                price = 0.0
+            db.add(AstrologerService(astrologer_id=user_id, name=name, duration_minutes=dur, price=price))
+
+    await db.commit()
+    return RedirectResponse(url="/admin/astrologers", status_code=status.HTTP_303_SEE_OTHER)
 
 @router.post("/astrologers/{astrologer_id}/edit")
 async def edit_astrologer(
     astrologer_id: int,
+    request: Request,
     name: str = Form(...),
     bio: str = Form(None),
     experience_years: int = Form(0),
     price_per_session: float = Form(0.0),
     rating_avg: float = Form(0.0),
     is_available: bool = Form(False),
+    profile_type: str = Form("astrologer"),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_admin_user_cookie)
 ):
+    form_data = await request.form()
+    service_names = form_data.getlist("service_names[]")
+    service_durations = form_data.getlist("service_durations[]")
+    service_prices = form_data.getlist("service_prices[]")
+
     result = await db.execute(select(AstrologerProfile).options(selectinload(AstrologerProfile.user)).filter(AstrologerProfile.user_id == astrologer_id))
     astrologer = result.scalars().first()
     if astrologer:
@@ -618,8 +701,145 @@ async def edit_astrologer(
         astrologer.price_per_session = price_per_session
         astrologer.rating_avg = rating_avg
         astrologer.is_available = is_available
+        astrologer.profile_type = profile_type
+        
+        from app.models.appointment import AstrologerService
+        # Delete old services
+        await db.execute(AstrologerService.__table__.delete().where(AstrologerService.astrologer_id == astrologer_id))
+        
+        # Add new services
+        for i in range(len(service_names)):
+            svc_name = service_names[i].strip()
+            if svc_name:
+                dur_str = service_durations[i] if i < len(service_durations) else "30"
+                price_str = service_prices[i] if i < len(service_prices) else "0"
+                try:
+                    dur = int(dur_str)
+                except ValueError:
+                    dur = 30
+                try:
+                    price = float(price_str)
+                except ValueError:
+                    price = 0.0
+                db.add(AstrologerService(astrologer_id=astrologer_id, name=svc_name, duration_minutes=dur, price=price))
+
         await db.commit()
     return RedirectResponse(url="/admin/astrologers", status_code=status.HTTP_303_SEE_OTHER)
+
+@router.get("/purohits", response_class=HTMLResponse)
+async def view_purohits(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_admin_user_cookie)
+):
+    purohits_result = await db.execute(select(AstrologerProfile).options(selectinload(AstrologerProfile.user), selectinload(AstrologerProfile.purohita_sevas)).filter(AstrologerProfile.profile_type == 'purohit'))
+    purohits = purohits_result.scalars().all()
+    
+    # Get users who don't have an astrologer profile yet to show in the create dropdown
+    existing_astro_ids = [a.user_id for a in purohits]
+    if existing_astro_ids:
+        users_result = await db.execute(select(User).filter(User.id.not_in(existing_astro_ids)))
+    else:
+        users_result = await db.execute(select(User))
+    eligible_users = users_result.scalars().all()
+    
+    return templates.TemplateResponse("purohits.html", {
+        "request": request, 
+        "user": current_user, 
+        "purohits": purohits,
+        "eligible_users": eligible_users
+    })
+
+@router.post("/purohits/create")
+async def create_purohit(
+    request: Request,
+    user_id: int = Form(...),
+    bio: str = Form(""),
+    experience_years: int = Form(0),
+    price_per_session: float = Form(0.0),
+    profile_type: str = Form("purohit"),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_admin_user_cookie)
+):
+    form_data = await request.form()
+    seva_names = form_data.getlist("seva_names[]")
+    seva_prices = form_data.getlist("seva_prices[]")
+
+    new_profile = AstrologerProfile(
+        user_id=user_id,
+        bio=bio,
+        experience_years=experience_years,
+        price_per_session=price_per_session,
+        profile_type=profile_type,
+        rating_avg=0.0,
+        is_available=True
+    )
+    db.add(new_profile)
+    await db.flush() # get user_id in session
+    
+    from app.models.appointment import PurohitaSeva
+    for i in range(len(seva_names)):
+        name = seva_names[i].strip()
+        if name:
+            price_str = seva_prices[i] if i < len(seva_prices) else "0"
+            try:
+                price = float(price_str)
+            except ValueError:
+                price = 0.0
+            db.add(PurohitaSeva(purohita_id=user_id, name=name, price=price))
+
+    await db.commit()
+    return RedirectResponse(url="/admin/purohits", status_code=status.HTTP_303_SEE_OTHER)
+
+@router.post("/purohits/{astrologer_id}/edit")
+async def edit_purohit(
+    astrologer_id: int,
+    request: Request,
+    name: str = Form(...),
+    bio: str = Form(""),
+    experience_years: int = Form(0),
+    price_per_session: float = Form(0.0),
+    rating_avg: float = Form(0.0),
+    is_available: bool = Form(False),
+    profile_type: str = Form("purohit"),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_admin_user_cookie)
+):
+    form_data = await request.form()
+    seva_names = form_data.getlist("seva_names[]")
+    seva_prices = form_data.getlist("seva_prices[]")
+
+    query = select(AstrologerProfile).options(selectinload(AstrologerProfile.user)).filter(AstrologerProfile.user_id == astrologer_id)
+    result = await db.execute(query)
+    purohit = result.scalars().first()
+    
+    if purohit:
+        if purohit.user:
+            purohit.user.name = name
+        purohit.bio = bio
+        purohit.experience_years = experience_years
+        purohit.price_per_session = price_per_session
+        purohit.rating_avg = rating_avg
+        purohit.is_available = is_available
+        purohit.profile_type = profile_type
+        
+        from app.models.appointment import PurohitaSeva
+        # Delete old sevas
+        await db.execute(PurohitaSeva.__table__.delete().where(PurohitaSeva.purohita_id == astrologer_id))
+        
+        # Add new sevas
+        for i in range(len(seva_names)):
+            name = seva_names[i].strip()
+            if name:
+                price_str = seva_prices[i] if i < len(seva_prices) else "0"
+                try:
+                    price = float(price_str)
+                except ValueError:
+                    price = 0.0
+                db.add(PurohitaSeva(purohita_id=astrologer_id, name=name, price=price))
+
+        await db.commit()
+    return RedirectResponse(url="/admin/purohits", status_code=status.HTTP_303_SEE_OTHER)
 
 @router.get("/availability", response_class=HTMLResponse)
 async def view_availability(
@@ -628,12 +848,25 @@ async def view_availability(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_admin_user_cookie)
 ):
-    astros_result = await db.execute(select(AstrologerProfile).options(selectinload(AstrologerProfile.user)))
+    await cleanup_expired_slots(db)
+    await ensure_upcoming_3_days_generated(db)
+    
+    astros_result = await db.execute(select(AstrologerProfile).options(selectinload(AstrologerProfile.user)).filter(AstrologerProfile.profile_type == 'astrologer'))
     astrologers = astros_result.scalars().all()
+    
+    calendar_result = await db.execute(
+        select(ExpertCalendarDay)
+        .join(AstrologerProfile, ExpertCalendarDay.expert_id == AstrologerProfile.user_id)
+        .filter(AstrologerProfile.profile_type == 'astrologer')
+        .order_by(ExpertCalendarDay.specific_date.desc())
+    )
+    calendar_days = calendar_result.scalars().all()
     
     avail_result = await db.execute(
         select(AstrologerAvailability)
+        .join(AstrologerProfile, AstrologerAvailability.astrologer_id == AstrologerProfile.user_id)
         .options(selectinload(AstrologerAvailability.astrologer).selectinload(AstrologerProfile.user))
+        .filter(AstrologerProfile.profile_type == 'astrologer')
         .order_by(AstrologerAvailability.specific_date.desc(), AstrologerAvailability.start_time.asc())
     )
     availability = avail_result.scalars().all()
@@ -642,9 +875,82 @@ async def view_availability(
         "request": request, 
         "user": current_user, 
         "astrologers": astrologers,
+        "calendar_days": calendar_days,
         "availability": availability,
         "error": error
     })
+
+@router.post("/availability/calendar")
+async def set_calendar_day(
+    request: Request,
+    astrologer_id: int = Form(...),
+    specific_date: date = Form(...),
+    status: str = Form(...),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_admin_user_cookie)
+):
+    # Check if exists
+    result = await db.execute(select(ExpertCalendarDay).filter(
+        ExpertCalendarDay.expert_id == astrologer_id,
+        ExpertCalendarDay.specific_date == specific_date
+    ))
+    day = result.scalars().first()
+    if day:
+        day.status = status
+    else:
+        new_day = ExpertCalendarDay(expert_id=astrologer_id, specific_date=specific_date, status=status)
+        db.add(new_day)
+        
+    # If leave, clear unbooked slots
+    if status == 'leave':
+        slots_res = await db.execute(select(AstrologerAvailability).filter(
+            AstrologerAvailability.astrologer_id == astrologer_id,
+            AstrologerAvailability.specific_date == specific_date,
+            AstrologerAvailability.is_booked == False
+        ))
+        for slot in slots_res.scalars().all():
+            await db.delete(slot)
+            
+    await db.commit()
+    # Redirect based on astrologer type to keep them on the right page
+    astro_res = await db.execute(select(AstrologerProfile).filter(AstrologerProfile.user_id == astrologer_id))
+    astro = astro_res.scalars().first()
+    if astro and astro.profile_type == 'purohit':
+        return RedirectResponse(url="/admin/purohits_availability", status_code=303)
+    return RedirectResponse(url="/admin/availability", status_code=303)
+
+@router.post("/availability/calendar/delete/{day_id}")
+async def delete_calendar_day(
+    day_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_admin_user_cookie)
+):
+    result = await db.execute(select(ExpertCalendarDay).filter(ExpertCalendarDay.id == day_id))
+    day = result.scalars().first()
+    if day:
+        # Before deleting, check profile type so we can redirect correctly
+        astro_res = await db.execute(select(AstrologerProfile).filter(AstrologerProfile.user_id == day.expert_id))
+        astro = astro_res.scalars().first()
+        is_purohit = astro and astro.profile_type == 'purohit'
+        
+        # We also delete all unbooked slots for that date because we are resetting the day.
+        # The auto-generator will recreate standard slots if the date is within the next 3 days.
+        slots_res = await db.execute(select(AstrologerAvailability).filter(
+            AstrologerAvailability.astrologer_id == day.expert_id,
+            AstrologerAvailability.specific_date == day.specific_date,
+            AstrologerAvailability.is_booked == False
+        ))
+        for slot in slots_res.scalars().all():
+            await db.delete(slot)
+            
+        await db.delete(day)
+        await db.commit()
+        
+        if is_purohit:
+            return RedirectResponse(url="/admin/purohits_availability", status_code=303)
+        return RedirectResponse(url="/admin/availability", status_code=303)
+        
+    return RedirectResponse(url="/admin/availability", status_code=303)
 
 @router.post("/availability/create")
 async def create_availability(
@@ -675,6 +981,22 @@ async def create_availability(
         error_msg = urllib.parse.quote("Time slot overlaps with an existing appointment.")
         return RedirectResponse(url=f"/admin/availability?error={error_msg}", status_code=status.HTTP_303_SEE_OTHER)
 
+    if start_dt < datetime.now():
+        import urllib.parse
+        error_msg = urllib.parse.quote("Cannot create slots in the past.")
+        return RedirectResponse(url=f"/admin/availability?error={error_msg}", status_code=status.HTTP_303_SEE_OTHER)
+        
+    # Check if calendar day exists and is 'leave'
+    cal_res = await db.execute(select(ExpertCalendarDay).filter(
+        ExpertCalendarDay.expert_id == astrologer_id,
+        ExpertCalendarDay.specific_date == specific_date
+    ))
+    cal_day = cal_res.scalars().first()
+    if cal_day and cal_day.status == 'leave':
+        import urllib.parse
+        error_msg = urllib.parse.quote("Expert is marked as on Leave on this date. Please change calendar status first.")
+        return RedirectResponse(url=f"/admin/availability?error={error_msg}", status_code=status.HTTP_303_SEE_OTHER)
+
     new_slot = AstrologerAvailability(
         astrologer_id=astrologer_id,
         specific_date=specific_date,
@@ -698,3 +1020,111 @@ async def delete_availability(
         await db.delete(slot)
         await db.commit()
     return RedirectResponse(url="/admin/availability", status_code=status.HTTP_303_SEE_OTHER)
+
+@router.get("/purohits_availability", response_class=HTMLResponse)
+async def view_purohits_availability(
+    request: Request,
+    error: str = None,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_admin_user_cookie)
+):
+    await cleanup_expired_slots(db)
+    await ensure_upcoming_3_days_generated(db)
+    
+    purohits_result = await db.execute(select(AstrologerProfile).options(selectinload(AstrologerProfile.user)).filter(AstrologerProfile.profile_type == 'purohit'))
+    purohits = purohits_result.scalars().all()
+    
+    calendar_result = await db.execute(
+        select(ExpertCalendarDay)
+        .join(AstrologerProfile, ExpertCalendarDay.expert_id == AstrologerProfile.user_id)
+        .filter(AstrologerProfile.profile_type == 'purohit')
+        .order_by(ExpertCalendarDay.specific_date.desc())
+    )
+    calendar_days = calendar_result.scalars().all()
+    
+    avail_result = await db.execute(
+        select(AstrologerAvailability)
+        .join(AstrologerProfile, AstrologerAvailability.astrologer_id == AstrologerProfile.user_id)
+        .options(selectinload(AstrologerAvailability.astrologer).selectinload(AstrologerProfile.user))
+        .filter(AstrologerProfile.profile_type == 'purohit')
+        .order_by(AstrologerAvailability.specific_date.desc(), AstrologerAvailability.start_time.asc())
+    )
+    availability = avail_result.scalars().all()
+    
+    return templates.TemplateResponse("purohits_availability.html", {
+        "request": request, 
+        "user": current_user, 
+        "purohits": purohits,
+        "calendar_days": calendar_days,
+        "availability": availability,
+        "error": error
+    })
+
+@router.post("/purohits_availability/create")
+async def create_purohits_availability(
+    request: Request,
+    astrologer_id: int = Form(...),
+    specific_date: date = Form(...),
+    start_time: time = Form(...),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_admin_user_cookie)
+):
+    from datetime import datetime
+    
+    # Calculate end time (+1 hour)
+    start_dt = datetime.combine(specific_date, start_time)
+    end_dt = start_dt + timedelta(hours=1)
+    end_time = end_dt.time()
+    
+    # Check for overlaps
+    overlap_query = select(AstrologerAvailability).filter(
+        AstrologerAvailability.astrologer_id == astrologer_id,
+        AstrologerAvailability.specific_date == specific_date,
+        AstrologerAvailability.start_time < end_time,
+        AstrologerAvailability.end_time > start_time
+    )
+    result = await db.execute(overlap_query)
+    if result.scalars().first():
+        import urllib.parse
+        error_msg = urllib.parse.quote("Time slot overlaps with an existing appointment.")
+        return RedirectResponse(url=f"/admin/purohits_availability?error={error_msg}", status_code=status.HTTP_303_SEE_OTHER)
+
+    if start_dt < datetime.now():
+        import urllib.parse
+        error_msg = urllib.parse.quote("Cannot create slots in the past.")
+        return RedirectResponse(url=f"/admin/purohits_availability?error={error_msg}", status_code=status.HTTP_303_SEE_OTHER)
+
+    # Check if calendar day exists and is 'leave'
+    cal_res = await db.execute(select(ExpertCalendarDay).filter(
+        ExpertCalendarDay.expert_id == astrologer_id,
+        ExpertCalendarDay.specific_date == specific_date
+    ))
+    cal_day = cal_res.scalars().first()
+    if cal_day and cal_day.status == 'leave':
+        import urllib.parse
+        error_msg = urllib.parse.quote("Expert is marked as on Leave on this date. Please change calendar status first.")
+        return RedirectResponse(url=f"/admin/purohits_availability?error={error_msg}", status_code=status.HTTP_303_SEE_OTHER)
+
+    new_slot = AstrologerAvailability(
+        astrologer_id=astrologer_id,
+        specific_date=specific_date,
+        start_time=start_time,
+        end_time=end_time,
+        is_booked=False
+    )
+    db.add(new_slot)
+    await db.commit()
+    return RedirectResponse(url="/admin/purohits_availability", status_code=status.HTTP_303_SEE_OTHER)
+
+@router.post("/purohits_availability/delete/{slot_id}")
+async def delete_purohits_availability(
+    slot_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_admin_user_cookie)
+):
+    result = await db.execute(select(AstrologerAvailability).filter(AstrologerAvailability.id == slot_id))
+    slot = result.scalars().first()
+    if slot and not slot.is_booked:
+        await db.delete(slot)
+        await db.commit()
+    return RedirectResponse(url="/admin/purohits_availability", status_code=status.HTTP_303_SEE_OTHER)

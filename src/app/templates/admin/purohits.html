@@ -1,11 +1,11 @@
 {% extends "base.html" %}
 
-{% block header %}Manage Astrologers{% endblock %}
+{% block header %}Manage Purohitas{% endblock %}
 
 {% block content %}
 <div class="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
     <div>
-        <h2 class="text-2xl font-bold text-gray-800">Astrologer Profiles</h2>
+        <h2 class="text-2xl font-bold text-gray-800">Purohita Profiles</h2>
         <p class="text-gray-500 text-sm mt-1">Manage public profile details, ratings, and experience.</p>
     </div>
     <button onclick="document.getElementById('create-modal').classList.remove('hidden')" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded shadow-sm transition duration-150 ease-in-out whitespace-nowrap">
@@ -17,10 +17,10 @@
 <div id="create-modal" class="fixed inset-0 bg-gray-900 bg-opacity-50 overflow-y-auto h-full w-full z-50 hidden">
     <div class="relative top-10 mx-auto p-6 border w-full max-w-2xl shadow-xl rounded-lg bg-white mb-20">
         <div class="flex justify-between items-center mb-6 border-b pb-3">
-            <h3 class="text-xl font-bold text-gray-900">Create New Astrologer Profile</h3>
+            <h3 class="text-xl font-bold text-gray-900">Create New Purohita Profile</h3>
             <button onclick="document.getElementById('create-modal').classList.add('hidden')" class="text-gray-400 hover:text-gray-600 text-3xl leading-none">&times;</button>
         </div>
-        <form action="/admin/astrologers/create" method="POST">
+        <form action="/admin/purohits/create" method="POST">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                 <div>
                     <label class="block text-gray-700 text-sm font-bold mb-2" for="user_id">Select User</label>
@@ -34,7 +34,7 @@
                 <div>
                     <label class="block text-gray-700 text-sm font-bold mb-2" for="profile_type">Profile Type</label>
                     <select class="shadow-sm appearance-none border border-gray-300 rounded-lg w-full py-2.5 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-gray-100" id="profile_type" name="profile_type" readonly>
-                        <option value="astrologer">Astrologer</option>
+                        <option value="purohit">Purohit</option>
                     </select>
                 </div>
 
@@ -44,16 +44,15 @@
                 </div>
 
                 <div class="md:col-span-2">
-                    <label class="block text-sm font-bold text-gray-700 mb-2">Custom Services & Pricing</label>
-                    <div id="create-services-container" class="space-y-3 mb-2">
-                        <div class="flex gap-2 items-center service-row">
-                            <input type="text" name="service_names[]" placeholder="Service Name (e.g. Career Reading)" required class="flex-1 shadow-sm appearance-none border border-gray-300 rounded-lg py-2 px-3 focus:ring-2 focus:ring-indigo-500 outline-none">
-                            <input type="number" step="1" name="service_durations[]" placeholder="Mins" required class="w-20 shadow-sm appearance-none border border-gray-300 rounded-lg py-2 px-3 focus:ring-2 focus:ring-indigo-500 outline-none">
-                            <input type="number" step="0.01" name="service_prices[]" placeholder="Price $" required class="w-24 shadow-sm appearance-none border border-gray-300 rounded-lg py-2 px-3 focus:ring-2 focus:ring-indigo-500 outline-none">
-                            <button type="button" onclick="removeServiceRow(this)" class="text-red-500 hover:text-red-700 p-2"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button>
+                    <label class="block text-gray-700 text-sm font-bold mb-2">Custom Sevas & Pricing</label>
+                    <div id="create-sevas-container" class="space-y-3 mb-2">
+                        <div class="flex gap-2 items-center seva-row">
+                            <input type="text" name="seva_names[]" placeholder="Seva Name (e.g. Ganapathi Homa)" class="flex-1 shadow-sm appearance-none border border-gray-300 rounded-lg py-2 px-3 text-gray-700 focus:ring-2 focus:ring-indigo-500 outline-none">
+                            <input type="number" step="0.01" name="seva_prices[]" placeholder="Price" class="w-24 shadow-sm appearance-none border border-gray-300 rounded-lg py-2 px-3 text-gray-700 focus:ring-2 focus:ring-indigo-500 outline-none">
+                            <button type="button" onclick="removeSevaRow(this)" class="text-red-500 hover:text-red-700 p-2"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button>
                         </div>
                     </div>
-                    <button type="button" onclick="addServiceRow('create-services-container')" class="text-sm text-indigo-600 hover:text-indigo-800 font-semibold">+ Add Another Service</button>
+                    <button type="button" onclick="addSevaRow('create-sevas-container')" class="text-sm text-indigo-600 hover:text-indigo-800 font-semibold">+ Add Another Seva</button>
                 </div>
 
                 <div>
@@ -80,8 +79,8 @@
 <!-- Data Table -->
 <div class="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden">
     <div class="px-6 py-4 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
-        <h3 class="text-lg font-semibold text-gray-800">Existing Astrologers</h3>
-        <span class="bg-indigo-100 text-indigo-800 text-xs font-bold px-3 py-1 rounded-full">{{ astrologers|length }} Total</span>
+        <h3 class="text-lg font-semibold text-gray-800">Existing Purohitas</h3>
+        <span class="bg-indigo-100 text-indigo-800 text-xs font-bold px-3 py-1 rounded-full">{{ purohits|length }} Total</span>
     </div>
     
     <div class="overflow-x-auto">
@@ -90,18 +89,19 @@
                 <tr>
                     <th scope="col" class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Expert</th>
                     <th scope="col" class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Stats</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Sevas</th>
                     <th scope="col" class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Pricing</th>
                     <th scope="col" class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
                     <th scope="col" class="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-100">
-                {% for astro in astrologers %}
+                {% for astro in purohits %}
                 <tr class="hover:bg-gray-50 transition duration-150">
                     <td class="px-6 py-4 whitespace-nowrap">
                         <div class="flex items-center">
                             <div class="h-10 w-10 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-lg mr-4 flex-shrink-0">
-                                {{ astro.user.name[0].upper() if astro.user.name else 'A' }}
+                                {{ astro.user.name[0].upper() if astro.user.name else 'P' }}
                             </div>
                             <div>
                                 <div class="text-sm font-bold text-gray-900">{{ astro.user.name }}</div>
@@ -114,6 +114,17 @@
                             <span class="font-semibold text-gray-700">★ {{ "%.1f"|format(astro.rating_avg) }}</span>
                         </div>
                         <div class="text-xs text-gray-500">{{ astro.experience_years }} yrs exp</div>
+                    </td>
+                    <td class="px-6 py-4">
+                        <div class="flex flex-col gap-1">
+                            {% for seva in astro.purohita_sevas %}
+                            <span class="inline-flex items-center text-xs font-medium bg-indigo-50 text-indigo-700 px-2.5 py-0.5 rounded-full">
+                                {{ seva.name }} <span class="ml-1 opacity-75">(${{ "%.2f"|format(seva.price) }})</span>
+                            </span>
+                            {% else %}
+                            <span class="text-xs text-gray-500">No sevas listed</span>
+                            {% endfor %}
+                        </div>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                         ${{ "%.2f"|format(astro.price_per_session) }}
@@ -134,23 +145,23 @@
             </tbody>
         </table>
         
-        {% if not astrologers %}
+        {% if not purohits %}
         <div class="p-10 text-center">
-            <p class="text-gray-500 text-sm">No astrologers found.</p>
+            <p class="text-gray-500 text-sm">No purohitas found.</p>
         </div>
         {% endif %}
     </div>
 </div>
 
 <!-- Edit Modals (Moved outside table to prevent HTML hoisting issues) -->
-{% for astro in astrologers %}
+{% for astro in purohits %}
 <div id="edit-modal-{{ astro.user_id }}" class="fixed inset-0 bg-gray-900 bg-opacity-50 overflow-y-auto h-full w-full z-50 hidden">
     <div class="relative top-10 mx-auto p-6 border w-full max-w-2xl shadow-xl rounded-lg bg-white mb-20 text-left">
         <div class="flex justify-between items-center mb-6 border-b pb-3">
             <h3 class="text-xl font-bold text-gray-900">Edit Profile: {{ astro.user.name }}</h3>
             <button onclick="document.getElementById('edit-modal-{{ astro.user_id }}').classList.add('hidden')" class="text-gray-400 hover:text-gray-600 text-3xl leading-none">&times;</button>
         </div>
-        <form action="/admin/astrologers/{{ astro.user_id }}/edit" method="POST">
+        <form action="/admin/purohits/{{ astro.user_id }}/edit" method="POST">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                 <div class="md:col-span-2">
                     <label class="block text-sm font-bold text-gray-700 mb-2">Name</label>
@@ -163,25 +174,23 @@
                 </div>
                 
                 <div class="md:col-span-2">
-                    <label class="block text-sm font-bold text-gray-700 mb-2">Custom Services & Pricing</label>
-                    <div id="edit-services-container-{{ astro.user_id }}" class="space-y-3 mb-2">
-                        {% for svc in astro.astrologer_services %}
-                        <div class="flex gap-2 items-center service-row">
-                            <input type="text" name="service_names[]" value="{{ svc.name }}" placeholder="Service Name (e.g. Career Reading)" required class="flex-1 border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-indigo-500 outline-none">
-                            <input type="number" step="1" name="service_durations[]" value="{{ svc.duration_minutes }}" placeholder="Mins" required class="w-20 border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-indigo-500 outline-none">
-                            <input type="number" step="0.01" name="service_prices[]" value="{{ svc.price }}" placeholder="Price $" required class="w-24 border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-indigo-500 outline-none">
-                            <button type="button" onclick="removeServiceRow(this)" class="text-red-500 hover:text-red-700 p-2"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button>
+                    <label class="block text-sm font-bold text-gray-700 mb-2">Custom Sevas & Pricing</label>
+                    <div id="edit-sevas-container-{{ astro.user_id }}" class="space-y-3 mb-2">
+                        {% for seva in astro.purohita_sevas %}
+                        <div class="flex gap-2 items-center seva-row">
+                            <input type="text" name="seva_names[]" value="{{ seva.name }}" placeholder="Seva Name" required class="flex-1 border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-indigo-500 outline-none">
+                            <input type="number" step="0.01" name="seva_prices[]" value="{{ seva.price }}" placeholder="Price" required class="w-24 border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-indigo-500 outline-none">
+                            <button type="button" onclick="removeSevaRow(this)" class="text-red-500 hover:text-red-700 p-2"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button>
                         </div>
                         {% else %}
-                        <div class="flex gap-2 items-center service-row">
-                            <input type="text" name="service_names[]" placeholder="Service Name (e.g. Career Reading)" required class="flex-1 border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-indigo-500 outline-none">
-                            <input type="number" step="1" name="service_durations[]" placeholder="Mins" required class="w-20 border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-indigo-500 outline-none">
-                            <input type="number" step="0.01" name="service_prices[]" placeholder="Price $" required class="w-24 border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-indigo-500 outline-none">
-                            <button type="button" onclick="removeServiceRow(this)" class="text-red-500 hover:text-red-700 p-2"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button>
+                        <div class="flex gap-2 items-center seva-row">
+                            <input type="text" name="seva_names[]" placeholder="Seva Name" class="flex-1 border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-indigo-500 outline-none">
+                            <input type="number" step="0.01" name="seva_prices[]" placeholder="Price" class="w-24 border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-indigo-500 outline-none">
+                            <button type="button" onclick="removeSevaRow(this)" class="text-red-500 hover:text-red-700 p-2"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button>
                         </div>
                         {% endfor %}
                     </div>
-                    <button type="button" onclick="addServiceRow('edit-services-container-{{ astro.user_id }}')" class="text-sm text-indigo-600 hover:text-indigo-800 font-semibold">+ Add Another Service</button>
+                    <button type="button" onclick="addSevaRow('edit-sevas-container-{{ astro.user_id }}')" class="text-sm text-indigo-600 hover:text-indigo-800 font-semibold">+ Add Another Seva</button>
                 </div>
                 
                 <div>
@@ -202,7 +211,7 @@
                 <div>
                     <label class="block text-sm font-bold text-gray-700 mb-2">Profile Type</label>
                     <select name="profile_type" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 bg-gray-100 text-gray-600 outline-none pointer-events-none">
-                        <option value="astrologer" selected>Astrologer</option>
+                        <option value="purohit" selected>Purohit</option>
                     </select>
                 </div>
                 
@@ -229,27 +238,27 @@
     </div>
 </div>
 {% endfor %}
+
 <script>
-function addServiceRow(containerId) {
+function addSevaRow(containerId) {
     const container = document.getElementById(containerId);
     const row = document.createElement('div');
-    row.className = 'flex gap-2 items-center service-row';
+    row.className = 'flex gap-2 items-center seva-row';
     row.innerHTML = `
-        <input type="text" name="service_names[]" placeholder="Service Name (e.g. Career Reading)" required class="flex-1 shadow-sm appearance-none border border-gray-300 rounded-lg py-2 px-3 focus:ring-2 focus:ring-indigo-500 outline-none">
-        <input type="number" step="1" name="service_durations[]" placeholder="Mins" required class="w-20 shadow-sm appearance-none border border-gray-300 rounded-lg py-2 px-3 focus:ring-2 focus:ring-indigo-500 outline-none">
-        <input type="number" step="0.01" name="service_prices[]" placeholder="Price $" required class="w-24 shadow-sm appearance-none border border-gray-300 rounded-lg py-2 px-3 focus:ring-2 focus:ring-indigo-500 outline-none">
-        <button type="button" onclick="removeServiceRow(this)" class="text-red-500 hover:text-red-700 p-2"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button>
+        <input type="text" name="seva_names[]" placeholder="Seva Name" required class="flex-1 shadow-sm appearance-none border border-gray-300 rounded-lg py-2 px-3 focus:ring-2 focus:ring-indigo-500 outline-none">
+        <input type="number" step="0.01" name="seva_prices[]" placeholder="Price" required class="w-24 shadow-sm appearance-none border border-gray-300 rounded-lg py-2 px-3 focus:ring-2 focus:ring-indigo-500 outline-none">
+        <button type="button" onclick="removeSevaRow(this)" class="text-red-500 hover:text-red-700 p-2"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button>
     `;
     container.appendChild(row);
 }
 
-function removeServiceRow(btn) {
-    const row = btn.closest('.service-row');
+function removeSevaRow(btn) {
+    const row = btn.closest('.seva-row');
     const container = row.parentElement;
     if (container.children.length > 1) {
         row.remove();
     } else {
-        // clear inputs
+        // Just clear the inputs if it's the last row
         const inputs = row.querySelectorAll('input');
         inputs.forEach(input => input.value = '');
     }

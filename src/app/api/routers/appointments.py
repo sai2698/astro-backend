@@ -49,7 +49,9 @@ async def book_appointment(
         scheduled_date=availability.specific_date,
         scheduled_start_time=availability.start_time,
         status="pending",
-        google_meet_link=google_meet_link
+        google_meet_link=google_meet_link,
+        selected_seva=booking_in.selected_seva,
+        selected_service=booking_in.selected_service
     )
     
     db.add(appointment)
