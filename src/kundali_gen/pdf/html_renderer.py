@@ -10,7 +10,7 @@ from kundali_gen.pdf.html_template import build_html
 
 def render_html_pdf(data, panchanga, planets, ascendant, all_vargas,
                     dasha_rows_3, sookshma_1yr, av_data, kaal_sarp, mangal,
-                    jaimini_karakas, output_path, charttype="full"):
+                    jaimini_karakas, output_path, charttype="full", language="en"):
     """Build the HTML string and write PDF to output_path."""
     html_str = build_html(
         data=data,
@@ -24,7 +24,8 @@ def render_html_pdf(data, panchanga, planets, ascendant, all_vargas,
         kaal_sarp=kaal_sarp,
         mangal=mangal,
         jaimini_karakas=jaimini_karakas,
-        charttype=charttype
+        charttype=charttype,
+        language=language
     )
 
     # Save HTML for debugging / preview in browser

@@ -84,11 +84,13 @@ class Appointment(Base):
     scheduled_date = Column(Date, nullable=False)
     scheduled_start_time = Column(Time, nullable=False)
     
-    status = Column(String, default="pending") # pending, scheduled, completed, cancelled
+    status = Column(String, default="pending") # pending, scheduled, completed, cancelled, payment_pending
     google_meet_link = Column(String, nullable=True) # uniquely identifies the video room
     report_file_url = Column(String, nullable=True) # Deprecated, use ConsultationFile
     selected_seva = Column(String, nullable=True) # The specific seva selected by the user
     selected_service = Column(String, nullable=True) # The specific astrologer service selected
+    razorpay_order_id = Column(String, index=True, nullable=True)
+    amount = Column(Float, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     user = relationship("User", foreign_keys=[user_id])

@@ -4,6 +4,7 @@ from kundali_gen.data.constants import (
     get_lucky_things, STHIRA_KARAKAS, DASHA_ORDER
 )
 from kundali_gen.core.divisional import VARGA_NAMES, VARGA_MEANING
+from kundali_gen.data.translations import t
 
 
 CSS_STYLES = """
@@ -138,12 +139,12 @@ def _data_table(headers, rows):
     return f'<table class="data-table"><thead><tr>{ths}</tr></thead><tbody>{trs}</tbody></table>'
 
 
-def _section(title, content):
-    return f'<div class="section"><div class="section-title">{_esc(title)}</div>{content}</div>'
+def _section(title, content, lang="en"):
+    return f'<div class="section"><div class="section-title">{_esc(t(title, lang))}</div>{content}</div>'
 
 
-def _subtitle(t):
-    return f'<div class="subtitle">{_esc(t)}</div>'
+def _subtitle(txt, lang="en"):
+    return f'<div class="subtitle">{_esc(t(txt, lang))}</div>'
 
 
 # ── Table-Based South Indian Chart ──────────────────────────────────────────
@@ -195,14 +196,16 @@ def _planets_to_signs(planets, ascendant, varga_signs=None):
     return signs
 
 
-def build_south_indian_chart(asc_sign_idx, planets_by_sign, title=""):
+def build_south_indian_chart(asc_sign_idx, planets_by_sign, title="", lang="en"):
     """Build a South Indian style chart using HTML table."""
     cells = {}
     for i in range(12):
         sign_num = i + 1
         planet_html = ""
         for p_str, color in planets_by_sign.get(i, []):
-            planet_html += f'<div style="color: {color};">{p_str}</div>'
+            # Translate planet string (e.g., "Su", "Mo", etc.)
+            p_str_translated = t(p_str, lang)
+            planet_html += f'<div style="color: {color};">{p_str_translated}</div>'
             
         cells[i] = f'''
         <td style="border: 1pt solid #2C5282; width: 25%; vertical-align: top; padding: 2px; height: 60px;">
@@ -216,13 +219,13 @@ def build_south_indian_chart(asc_sign_idx, planets_by_sign, title=""):
     om_html = f'''
     <td colspan="2" rowspan="2" style="border: 1pt solid #2C5282; text-align: center; vertical-align: middle; background: #EBF8FF;">
         <div style="color: #1A365D; font-size: 16pt; font-weight: bold;">&#2384;</div>
-        <div style="color: #1A365D; font-size: 9pt; margin-top: 4px;">Lagna: {asc_sign_idx + 1}</div>
+        <div style="color: #1A365D; font-size: 9pt; margin-top: 4px;">{t("Lagna", lang)}: {asc_sign_idx + 1}</div>
     </td>
     '''
     
     return f'''
     <div class="chart-wrap">
-      <div class="chart-title">{_esc(title)}</div>
+      <div class="chart-title">{_esc(t(title, lang))}</div>
       <table style="width: 100%; border-collapse: collapse; border: 1.5pt solid #2C5282; table-layout: fixed; background: #fff;">
         <tr>{cells[11]} {cells[0]} {cells[1]} {cells[2]}</tr>
         <tr>{cells[10]} {om_html} {cells[3]}</tr>
@@ -233,40 +236,40 @@ def build_south_indian_chart(asc_sign_idx, planets_by_sign, title=""):
     '''
 
 
-def build_lagna_chart(planets, ascendant, all_vargas):
+def build_lagna_chart(planets, ascendant, all_vargas, lang="en"):
     """Build the D1 Lagna chart section with HTML chart + side table."""
     lagna_idx = ascendant["sign_idx"]
     planets_by_sign = _planets_to_signs(planets, ascendant)
-    chart_html = build_south_indian_chart(lagna_idx, planets_by_sign, title="Lagna Chart (D1)")
+    chart_html = build_south_indian_chart(lagna_idx, planets_by_sign, title="Lagna Chart (D1)", lang=lang)
 
     # Build a compact planet-house summary table beside the chart
     rows = []
     for p_name in ["Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn", "Rahu", "Ketu"]:
         pdata = planets[p_name]
-        rows.append([p_name, str(pdata.get("house", "-")), SIGNS[pdata["sign_idx"]], pdata["dms"]])
+        rows.append([t(p_name, lang), str(pdata.get("house", "-")), t(SIGNS[pdata["sign_idx"]], lang), pdata["dms"]])
 
-    table_html = _data_table(["Planet", "House", "Sign", "Degrees"], rows)
+    table_html = _data_table([t("Planet", lang), t("House", lang), t("Sign", lang), t("Degrees", lang)], rows)
 
     content = f'''
 <div class="chart-layout">
   <div class="chart-left">{chart_html}</div>
   <div class="chart-right">{table_html}</div>
 </div>'''
-    return _section("Birth Chart — Lagna (D1)", content)
+    return _section("Birth Chart — Lagna (D1)", content, lang)
 
 
 
-def build_cover(data):
+def build_cover(data, lang="en"):
     d = data
     birth_rows = [
-        ("Name", d.get("name", "")),
-        ("Gender", d.get("gender", "")),
-        ("Date of Birth", d.get("dob_display", d.get("dob_str", ""))),
-        ("Time of Birth", d.get("time_str", "")),
-        ("Place of Birth", d.get("full_address", d.get("place_name", ""))),
-        ("Latitude", f"{d.get('lat', 0):.5f} N"),
-        ("Longitude", f"{d.get('lon', 0):.5f} E"),
-        ("Timezone", f"{d.get('tz_str', '')} ({d.get('tz_offset', '')})"),
+        (t("Name", lang), d.get("name", "")),
+        (t("Gender", lang), t(d.get("gender", ""), lang)),
+        (t("Date of Birth", lang), d.get("dob_display", d.get("dob_str", ""))),
+        (t("Time of Birth", lang), d.get("time_str", "")),
+        (t("Place of Birth", lang), d.get("full_address", d.get("place_name", ""))),
+        (t("Latitude", lang), f"{d.get('lat', 0):.5f} N"),
+        (t("Longitude", lang), f"{d.get('lon', 0):.5f} E"),
+        (t("Timezone", lang), f"{d.get('tz_str', '')} ({d.get('tz_offset', '')})"),
     ]
     birth_html = '<table style="width: 100%; border: none;">'
     for k, v in birth_rows:
@@ -326,7 +329,7 @@ def build_cover(data):
   <div class="cover-body">
     
     <div class="birth-card">
-      <div class="birth-card-title">Birth Details</div>
+      <div class="birth-card-title">{_esc(t("Birth Details", lang))}</div>
       {birth_html}
     </div>
   </div>
@@ -335,55 +338,55 @@ def build_cover(data):
 
 # ── Panchanga ─────────────────────────────────────────────────────────────────
 
-def build_panchanga(p):
+def build_panchanga(p, lang="en"):
     pairs = [
-        ("Sunrise", p.get("sunrise", "")), ("Sunset", p.get("sunset", "")),
-        ("Day Length", p.get("day_length", "")), ("Night Length", p.get("night_length", "")),
-        ("Kali Year", p.get("kali_year", "")), ("Saka Year", p.get("saka_year", "")),
-        ("Hindu Year", p.get("hindu_year", "")), ("Ayana", p.get("ayana", "")),
-        ("Rithu (Season)", p.get("ritu", "")), ("Hindu Month", p.get("hindu_month", "")),
-        ("Tithi", p.get("tithi", "")), ("Weekday", p.get("weekday", "")),
-        ("Vedic Weekday", p.get("vedic_weekday", "")),
-        ("Nakshatra, Pada", p.get("nakshatra_pada", "")),
-        ("Moon Sign", f"{p.get('moon_sign', '')} Sign"),
-        ("Yoga", p.get("yoga", "")), ("Karana", p.get("karana", "")),
-        ("Janmakshar", p.get("janmakshar", "")),
+        (t("Sunrise", lang), p.get("sunrise", "")), (t("Sunset", lang), p.get("sunset", "")),
+        (t("Day Length", lang), p.get("day_length", "")), (t("Night Length", lang), p.get("night_length", "")),
+        (t("Kali Year", lang), p.get("kali_year", "")), (t("Saka Year", lang), p.get("saka_year", "")),
+        (t("Hindu Year", lang), t(p.get("hindu_year", ""), lang)), (t("Ayana", lang), t(p.get("ayana", ""), lang)),
+        (t("Rithu (Season)", lang), t(p.get("ritu", ""), lang)), (t("Hindu Month", lang), t(p.get("hindu_month", ""), lang)),
+        (t("Tithi", lang), t(p.get("tithi", ""), lang)), (t("Weekday", lang), t(p.get("weekday", ""), lang)),
+        (t("Vedic Weekday", lang), t(p.get("vedic_weekday", ""), lang)),
+        (t("Nakshatra, Pada", lang), t(p.get("nakshatra_pada", ""), lang)),
+        (t("Moon Sign", lang), f"{t(p.get('moon_sign', ''), lang)} {t('Sign', lang)}"),
+        (t("Yoga", lang), t(p.get("yoga", ""), lang)), (t("Karana", lang), t(p.get("karana", ""), lang)),
+        (t("Janmakshar", lang), p.get("janmakshar", "")),
     ]
-    return _section("Panchanga Details", _kv_table(pairs))
+    return _section("Panchanga Details", _kv_table(pairs), lang)
 
 
 # ── Avakahada ─────────────────────────────────────────────────────────────────
 
-def build_avakahada(p):
+def build_avakahada(p, lang="en"):
     from kundali_gen.data.constants import SIGN_VARNA, SIGN_VASHYA
     pairs = [
-        ("Nakshatra", p.get("nakshatra", "")), ("Nadi", p.get("nadi", "")),
-        ("Yoni", p.get("yoni", "")), ("Gana", p.get("gana", "")),
-        ("Moon Sign", p.get("moon_sign", "")), ("Rashi Lord", p.get("rashi_lord", "")),
-        ("Varna Kuta", SIGN_VARNA.get(p.get("moon_sign_idx", 0), "")),
-        ("Vashya Kuta", SIGN_VASHYA.get(p.get("moon_sign_idx", 0), "")),
+        (t("Nakshatra", lang), t(p.get("nakshatra", ""), lang)), (t("Nadi", lang), p.get("nadi", "")),
+        (t("Yoni", lang), p.get("yoni", "")), (t("Gana", lang), p.get("gana", "")),
+        (t("Moon Sign", lang), t(p.get("moon_sign", ""), lang)), (t("Rashi Lord", lang), t(p.get("rashi_lord", ""), lang)),
+        (t("Varna Kuta", lang), SIGN_VARNA.get(p.get("moon_sign_idx", 0), "")),
+        (t("Vashya Kuta", lang), SIGN_VASHYA.get(p.get("moon_sign_idx", 0), "")),
     ]
-    return _section("Avakahada Chakra", _kv_table(pairs))
+    return _section("Avakahada Chakra", _kv_table(pairs), lang)
 
 
 # ── Lucky Things & Jaimini Karakas ──────────────────────────────────────────
 
-def build_lucky_things(ascendant, jaimini_karakas):
+def build_lucky_things(ascendant, jaimini_karakas, lang="en"):
     lt = get_lucky_things(ascendant["sign_idx"])
     pairs = [
-        ("Lucky Days", ", ".join(lt.get("days", []))),
-        ("Lucky Planets", ", ".join(lt.get("planets", []))),
-        ("Friendly Signs", ", ".join(lt.get("friendly_signs", []))),
-        ("Friendly Ascendant", ", ".join(lt.get("friendly_asc", []))),
-        ("Life Stone", lt.get("life_stone", "")),
-        ("Lucky Stone", lt.get("lucky_stone", "")),
-        ("Punya Stone", lt.get("punya_stone", "")),
-        ("Favorable Deity", ", ".join(lt.get("deity", []))),
-        ("Favorable Metal", lt.get("metal", "")),
-        ("Favorable Color", ", ".join(lt.get("color", []))),
-        ("Favorable Direction", ", ".join(lt.get("direction", []))),
-        ("Favorable Time", lt.get("time", "")),
-        ("Favorable Numbers", ", ".join(lt.get("numbers", []))),
+        (t("Lucky Days", lang), ", ".join([t(d, lang) for d in lt.get("days", [])])),
+        (t("Lucky Planets", lang), ", ".join([t(p, lang) for p in lt.get("planets", [])])),
+        (t("Friendly Signs", lang), ", ".join([t(s, lang) for s in lt.get("friendly_signs", [])])),
+        (t("Friendly Ascendant", lang), ", ".join([t(a, lang) for a in lt.get("friendly_asc", [])])),
+        (t("Life Stone", lang), lt.get("life_stone", "")),
+        (t("Lucky Stone", lang), lt.get("lucky_stone", "")),
+        (t("Punya Stone", lang), lt.get("punya_stone", "")),
+        (t("Favorable Deity", lang), ", ".join(lt.get("deity", []))),
+        (t("Favorable Metal", lang), lt.get("metal", "")),
+        (t("Favorable Color", lang), ", ".join(lt.get("color", []))),
+        (t("Favorable Direction", lang), ", ".join(lt.get("direction", []))),
+        (t("Favorable Time", lang), lt.get("time", "")),
+        (t("Favorable Numbers", lang), ", ".join(lt.get("numbers", []))),
     ]
     lucky_html = _kv_table(pairs)
 
@@ -391,23 +394,23 @@ def build_lucky_things(ascendant, jaimini_karakas):
     for karaka, planet in jaimini_karakas.items():
         p_short = PLANET_SHORT[PLANETS.index(planet)] if planet in PLANETS else planet[:2]
         sthira = STHIRA_KARAKAS.get(planet, "")
-        rows.append([p_short, karaka, sthira])
-    jaimini_html = _data_table(["Planet", "Chara Karaka", "Sthira Karaka"], rows)
+        rows.append([t(p_short, lang), karaka, sthira])
+    jaimini_html = _data_table([t("Planet", lang), t("Chara Karaka", lang), t("Sthira Karaka", lang)], rows)
 
-    return _section("Lucky Things", lucky_html + _subtitle("Jaimini Karakas") + jaimini_html)
+    return _section("Lucky Things", lucky_html + _subtitle("Jaimini Karakas", lang) + jaimini_html, lang)
 
 
 # ── Planetary Positions ────────────────────────────────────────────────────────
 
-def build_planets(planets, ascendant):
+def build_planets(planets, ascendant, lang="en"):
     order = ["Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn", "Rahu", "Ketu", "Ascendant"]
     rows = []
     for p in order:
         data = ascendant if p == "Ascendant" else planets[p]
-        rx = "-" if p == "Ascendant" else ("(R)" if data.get("retrograde") else ("(C)" if data.get("combust") else "-"))
-        rows.append([p, rx, SIGNS[data["sign_idx"]], data["dms"],
+        rx = "-" if p == "Ascendant" else (t("(R)", lang) if data.get("retrograde") else (t("(C)", lang) if data.get("combust") else "-"))
+        rows.append([t(p, lang), rx, t(SIGNS[data["sign_idx"]], lang), data["dms"],
                      str(planets[p].get("house", "-")) if p != "Ascendant" else "-"])
-    t1 = _data_table(["Planet", "Rx/Comb", "Sign", "Deg/Min/Sec", "House"], rows)
+    t1 = _data_table([t("Planet", lang), t("Rx/Comb", lang), t("Sign", lang), t("Deg/Min/Sec", lang), t("House", lang)], rows)
 
     rows2 = []
     for p in order:
@@ -416,27 +419,27 @@ def build_planets(planets, ascendant):
         pada = data["pada"]
         nak = NAKSHATRAS[nak_idx]
         nav = data.get("nav_sign_idx", (nak_idx * 4 + pada - 1) % 12)
-        rows2.append([p, f"{nak['name']}-{pada}", nak["lord"], SIGNS[nav], SIGN_LORD[nav]])
-    t2 = _data_table(["Planet", "Nakshatra/Pada", "Nak. Lord", "Navamsha Sign", "Navamsha Lord"], rows2)
+        rows2.append([t(p, lang), f"{t(nak['name'], lang)}-{pada}", t(nak["lord"], lang), t(SIGNS[nav], lang), t(SIGN_LORD[nav], lang)])
+    t2 = _data_table([t("Planet", lang), t("Nakshatra/Pada", lang), t("Nak. Lord", lang), t("Navamsha Sign", lang), t("Navamsha Lord", lang)], rows2)
 
-    return _section("Planetary Positions", t1 + _subtitle("Planetary Table (Nakshatra)") + t2)
+    return _section("Planetary Positions", t1 + _subtitle("Planetary Table (Nakshatra)", lang) + t2, lang)
 
 
 # ── Bhava Table ───────────────────────────────────────────────────────────────
 
-def build_bhava(sripati_cusps):
+def build_bhava(sripati_cusps, lang="en"):
     rows = []
     for i, cusp in enumerate(sripati_cusps[:12]):
         sign_idx = int(cusp / 30) % 12
         deg = cusp % 30
         d = int(deg); m = int((deg - d) * 60); s = int(((deg - d) * 60 - m) * 60)
-        rows.append([BHAVA_NAMES[i], SIGNS[sign_idx], f"{d:02d}:{m:02d}:{s:02d}"])
-    return _section("Bhava Table", _data_table(["House", "Sign", "Deg/Min/Sec"], rows))
+        rows.append([t(BHAVA_NAMES[i], lang), t(SIGNS[sign_idx], lang), f"{d:02d}:{m:02d}:{s:02d}"])
+    return _section("Bhava Table", _data_table([t("House", lang), t("Sign", lang), t("Deg/Min/Sec", lang)], rows), lang)
 
 
 # ── Divisional Charts ─────────────────────────────────────────────────────────
 
-def build_divisional_charts(planets, ascendant, all_vargas):
+def build_divisional_charts(planets, ascendant, all_vargas, lang="en"):
     varga_keys = ["D1", "D2", "D9", "D3", "D4", "D7", "D10", "D12", "D16", "D20",
                   "D24", "D27", "D30", "D40", "D45", "D60"]
     blocks = ""
@@ -455,7 +458,7 @@ def build_divisional_charts(planets, ascendant, all_vargas):
                 asc_idx = v_signs.get("Ascendant", ascendant["sign_idx"])
                 p_signs = _planets_to_signs(planets, ascendant, v_signs)
                 title = VARGA_NAMES.get(vk, vk)
-                chart_html = build_south_indian_chart(asc_idx, p_signs, title=title)
+                chart_html = build_south_indian_chart(asc_idx, p_signs, title=title, lang=lang)
                 meaning = VARGA_MEANING.get(vk, "")
                 meaning_html = f'<div class="varga-meaning">{_esc(meaning[:80])}</div>' if meaning else ""
                 grid_html += f'<td style="width: 50%; padding: 3mm; vertical-align: top; border: none;">{chart_html}{meaning_html}</td>'
@@ -472,7 +475,7 @@ def build_divisional_charts(planets, ascendant, all_vargas):
                 asc_idx = v_signs.get("Ascendant", ascendant["sign_idx"])
                 p_signs = _planets_to_signs(planets, ascendant, v_signs)
                 title = VARGA_NAMES.get(vk, vk)
-                chart_html = build_south_indian_chart(asc_idx, p_signs, title=title)
+                chart_html = build_south_indian_chart(asc_idx, p_signs, title=title, lang=lang)
                 meaning = VARGA_MEANING.get(vk, "")
                 meaning_html = f'<div class="varga-meaning">{_esc(meaning[:80])}</div>' if meaning else ""
                 grid_html += f'<td style="width: 50%; padding: 3mm; vertical-align: top; border: none;">{chart_html}{meaning_html}</td>'
@@ -481,35 +484,35 @@ def build_divisional_charts(planets, ascendant, all_vargas):
         grid_html += '</tr>'
         
         grid_html += '</table>'
-        blocks += _section(f"Divisional Charts ({chunk[0]}-{chunk[-1]})", grid_html)
+        blocks += _section(f"Divisional Charts ({chunk[0]}-{chunk[-1]})", grid_html, lang)
     return blocks
 
 
 # ── Ashtakavarga ──────────────────────────────────────────────────────────────
 
-def build_ashtakavarga(av_data):
+def build_ashtakavarga(av_data, lang="en"):
     src_map = {"Sun": "Su", "Moon": "Mo", "Mercury": "Me", "Venus": "Ve",
                "Mars": "Ma", "Jupiter": "Ju", "Saturn": "Sa", "Lagna": "As"}
-    headers = ["Sign"] + list(src_map.values()) + ["Total"]
+    headers = [t("Sign", lang)] + [t(v, lang) for v in src_map.values()] + ["Total"]
     blocks = ""
     for planet_name in ["Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn"]:
         bindus = av_data.get(planet_name, {}).get("bindus", [0] * 12)
         contribs = av_data.get(planet_name, {}).get("contributions", {})
         rows = []
         for s_idx, sname in enumerate(SIGN_SHORT):
-            row = [sname]
+            row = [t(sname, lang)]
             for full_name in src_map:
                 c_val = contribs.get(full_name, [0] * 12)
                 row.append(str(c_val[s_idx]) if len(c_val) > s_idx else "0")
             row.append(str(bindus[s_idx]))
             rows.append(row)
-        blocks += _section(f"{planet_name} Ashtakavarga", _data_table(headers, rows))
+        blocks += _section(f"{t(planet_name, lang)} Ashtakavarga", _data_table(headers, rows), lang)
     return blocks
 
 
 # ── Dasha ─────────────────────────────────────────────────────────────────────
 
-def build_dasha(dasha_rows_3):
+def build_dasha(dasha_rows_3, lang="en"):
     from kundali_gen.core.dasha import format_dasha_date
     rows_by = {}
     for row in dasha_rows_3:
@@ -523,115 +526,116 @@ def build_dasha(dasha_rows_3):
             md_s = PLANET_SHORT[PLANETS.index(r["MD"])] if r["MD"] in PLANETS else r["MD"]
             bh_s = PLANET_SHORT[PLANETS.index(r["BH"])] if r["BH"] in PLANETS else r["BH"]
             pr_s = PLANET_SHORT[PLANETS.index(r["PR"])] if r["PR"] in PLANETS else r["PR"]
-            table_rows.append([md_s, bh_s, pr_s, format_dasha_date(r["start"]), f"{r['age']:.1f}"])
-        blocks += _section(f"MD: {md} — BH: {bh}", _data_table(["MD", "BH", "PR", "Start Date", "Age"], table_rows))
+            table_rows.append([t(md_s, lang), t(bh_s, lang), t(pr_s, lang), format_dasha_date(r["start"]), f"{r['age']:.1f}"])
+        blocks += _section(f"{t('MD', lang)}: {t(md, lang)} — {t('BH', lang)}: {t(bh, lang)}", _data_table([t("MD", lang), t("BH", lang), t("PR", lang), t("Start Date", lang), t("Age", lang)], table_rows), lang)
     return blocks
 
 
 # ── Doshas ────────────────────────────────────────────────────────────────────
 
-def build_doshas(kaal_sarp, mangal):
+def build_doshas(kaal_sarp, mangal, lang="en"):
     ks_found, ks_msg = kaal_sarp
     mg_lagna = mangal.get("lagna", {})
     mg_moon = mangal.get("moon", {})
     mg_venus = mangal.get("venus", {})
     content = f"""
     <div style="margin-bottom:5mm">
-      <div class="subtitle">Kaal Sarp Dosha</div>
+      <div class="subtitle">{_esc(t('Kaal Sarp Dosha', lang))}</div>
       <p style="margin:2mm 0">{_esc(ks_msg)}</p>
     </div>
     <div>
-      <div class="subtitle">Mangal Dosha</div>
+      <div class="subtitle">{_esc(t('Mangal Dosha', lang))}</div>
       <p style="margin:2mm 0">{_esc(mg_lagna.get('message',''))}</p>
       <p style="margin:2mm 0">{_esc(mg_moon.get('message',''))}</p>
       <p style="margin:2mm 0">{_esc(mg_venus.get('message',''))}</p>
     </div>"""
-    return _section("Doshas and Remedies", content)
+    return _section("Doshas and Remedies", content, lang)
 
 
 # ── Predictions ───────────────────────────────────────────────────────────────
 
-def build_predictions(data, panchanga, ascendant, av_data):
-    dasha_lord = data.get("dasha_lord", "")
+def build_predictions(data, panchanga, ascendant, av_data, lang="en"):
+    dasha_lord = t(data.get("dasha_lord", ""), lang)
     balance_str = data.get("balance_str", "")
-    lagna_sign = SIGNS[ascendant["sign_idx"]]
+    lagna_sign = t(SIGNS[ascendant["sign_idx"]], lang)
     
     lagna_html = f"""
     <div style="margin-bottom: 5mm;">
-      <div class="subtitle">Lagna Analysis</div>
+      <div class="subtitle">{_esc(t('Lagna Analysis', lang))}</div>
       <p style="line-height:1.5;">You are born in {lagna_sign} Ascendant. 
-      The lord of this house is {SIGN_LORD[ascendant['sign_idx']]}. 
-      Your Moon Sign is {panchanga.get('moon_sign','')}. 
-      You are born in 3rd quarter of {panchanga.get('nakshatra','')} Nakshatra. 
+      The lord of this house is {t(SIGN_LORD[ascendant['sign_idx']], lang)}. 
+      Your Moon Sign is {t(panchanga.get('moon_sign',''), lang)}. 
+      You are born in 3rd quarter of {t(panchanga.get('nakshatra',''), lang)} Nakshatra. 
       You are born in maha dasha of {dasha_lord}.</p>
     </div>
     <div style="margin-bottom: 5mm;">
-      <div class="subtitle">Dasha Balance at Birth</div>
+      <div class="subtitle">{_esc(t('Dasha Balance at Birth', lang))}</div>
       <p style="line-height:1.5;">{dasha_lord} Dasha {balance_str}</p>
     </div>
     <div style="margin-bottom: 5mm;">
-      <div class="subtitle">Birth Nakshatra</div>
-      <p style="line-height:1.5;">You are born under the {panchanga.get('nakshatra','')} Nakshatra. 
+      <div class="subtitle">{_esc(t('Birth Nakshatra', lang))}</div>
+      <p style="line-height:1.5;">You are born under the {t(panchanga.get('nakshatra',''), lang)} Nakshatra. 
       This nakshatra bestows intelligence, curiosity and strong communication skills.</p>
     </div>
     """
-    blocks = _section("Horoscope Predictions", lagna_html)
+    blocks = _section("Horoscope Predictions", lagna_html, lang)
 
     for md_lord in DASHA_ORDER:
-        md_text = f"This {md_lord} Mahadasha will bring significant changes. "
-        md_text += f"During this period, the significations of {md_lord} will be prominent in your life. "
+        md_lord_t = t(md_lord, lang)
+        md_text = f"This {md_lord_t} Mahadasha will bring significant changes. "
+        md_text += f"During this period, the significations of {md_lord_t} will be prominent in your life. "
         md_text += "Consult a qualified Vedic astrologer for personalized guidance."
-        blocks += _section(f"{md_lord} Mahadasha Predictions", f'<div class="subtitle">{md_lord} Mahadasha Overview</div><p style="line-height:1.5;">{_esc(md_text)}</p>')
+        blocks += _section(f"{md_lord} Mahadasha Predictions", f'<div class="subtitle">{md_lord_t} Mahadasha Overview</div><p style="line-height:1.5;">{_esc(md_text)}</p>', lang)
 
     samudaya = av_data.get("Samudaya", {}).get("bindus", [0]*12)
     av_rows = []
     for h_idx, pts in enumerate(samudaya):
-        house_name = BHAVA_NAMES[h_idx]
+        house_name = t(BHAVA_NAMES[h_idx], lang)
         quality = "Excellent" if pts >= 30 else ("Good" if pts >= 25 else "Demands Attention")
         av_rows.append([f"{h_idx+1}. {house_name}", str(pts), quality])
     
-    blocks += _section("Natal Samudaya Ashtakavarga Predictions", _data_table(["House", "Points", "Quality"], av_rows))
+    blocks += _section("Natal Samudaya Ashtakavarga Predictions", _data_table([t("House", lang), t("Points", lang), t("Quality", lang)], av_rows), lang)
     return blocks
 
 
 # ── Master builder ────────────────────────────────────────────────────────────
 
 def build_html(data, panchanga, planets, ascendant, all_vargas,
-               dasha_rows_3, sookshma_1yr, av_data, kaal_sarp, mangal, jaimini_karakas, charttype="full"):
+               dasha_rows_3, sookshma_1yr, av_data, kaal_sarp, mangal, jaimini_karakas, charttype="full", language="en"):
     
     sookshma_html = ""
     if sookshma_1yr:
         from kundali_gen.core.dasha import format_dasha_date
         s_rows = []
         for r in sookshma_1yr:
-            s_rows.append([r["MD"], r["BH"], r["PR"], r["SD"], format_dasha_date(r["start"]), f"{r['age']:.1f}"])
-        sookshma_html = _section("Vimshottari Dashas: Sookshma Dasha (Next 1 Year)", _data_table(["MD", "BH", "PR", "SD", "Start Date", "Age"], s_rows))
+            s_rows.append([t(r["MD"], language), t(r["BH"], language), t(r["PR"], language), t(r["SD"], language), format_dasha_date(r["start"]), f"{r['age']:.1f}"])
+        sookshma_html = _section("Vimshottari Dashas: Sookshma Dasha (Next 1 Year)", _data_table([t("MD", language), t("BH", language), t("PR", language), t("SD", language), t("Start Date", language), t("Age", language)], s_rows), language)
 
     if charttype == "custom":
         body = (
-            build_cover(data)
-            + build_panchanga(panchanga)
-            + build_lagna_chart(planets, ascendant, all_vargas)
-            + build_planets(planets, ascendant)
-            + build_bhava(data.get("sripati_cusps", [0] * 12))
-            + build_dasha(dasha_rows_3)
+            build_cover(data, language)
+            + build_panchanga(panchanga, language)
+            + build_lagna_chart(planets, ascendant, all_vargas, language)
+            + build_planets(planets, ascendant, language)
+            + build_bhava(data.get("sripati_cusps", [0] * 12), language)
+            + build_dasha(dasha_rows_3, language)
             + sookshma_html
         )
     else:
         body = (
-            build_cover(data)
-            + build_lagna_chart(planets, ascendant, all_vargas)
-            + build_panchanga(panchanga)
-            + build_avakahada(panchanga)
-            + build_lucky_things(ascendant, jaimini_karakas)
-            + build_planets(planets, ascendant)
-            + build_bhava(data.get("sripati_cusps", [0] * 12))
-            + build_divisional_charts(planets, ascendant, all_vargas)
-            + build_ashtakavarga(av_data)
-            + build_dasha(dasha_rows_3)
+            build_cover(data, language)
+            + build_lagna_chart(planets, ascendant, all_vargas, language)
+            + build_panchanga(panchanga, language)
+            + build_avakahada(panchanga, language)
+            + build_lucky_things(ascendant, jaimini_karakas, language)
+            + build_planets(planets, ascendant, language)
+            + build_bhava(data.get("sripati_cusps", [0] * 12), language)
+            + build_divisional_charts(planets, ascendant, all_vargas, language)
+            + build_ashtakavarga(av_data, language)
+            + build_dasha(dasha_rows_3, language)
             + sookshma_html
-            + build_doshas(kaal_sarp, mangal)
-            + build_predictions(data, panchanga, ascendant, av_data)
+            + build_doshas(kaal_sarp, mangal, language)
+            + build_predictions(data, panchanga, ascendant, av_data, language)
         )
 
     return f"""<!DOCTYPE html>

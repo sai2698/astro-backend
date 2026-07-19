@@ -15,6 +15,7 @@ from kundali_gen.core.yogas import (
     get_jaimini_karakas
 )
 from kundali_gen.pdf.html_template import build_html
+from kundali_gen.pdf.json_builder import build_json
 
 router = APIRouter()
 
@@ -28,8 +29,10 @@ class KundaliRequest(BaseModel):
     lon: Optional[float] = None
     tz: Optional[str] = None
     charttype: str = Field(default="custom", description="full or custom")
+    language: str = Field(default="en", description="en or te")
+    output_type: str = Field(default="html", description="html or json")
 
-@router.post("/generate", response_class=HTMLResponse)
+@router.post("/generate")
 async def generate_kundali(request: KundaliRequest):
     try:
         calc = calc_all(
@@ -70,6 +73,24 @@ async def generate_kundali(request: KundaliRequest):
         mangal = check_mangal_dosha(planets, ascendant["sign_idx"])
         jaimini_karakas = get_jaimini_karakas(planets)
 
+        if request.output_type == "json":
+            json_data = build_json(
+                data=calc,
+                panchanga=panchanga,
+                planets=planets,
+                ascendant=ascendant,
+                all_vargas=all_vargas,
+                dasha_rows_3=dasha_rows_3,
+                sookshma_1yr=sookshma_1yr,
+                av_data=av_data,
+                kaal_sarp=kaal_sarp,
+                mangal=mangal,
+                jaimini_karakas=jaimini_karakas,
+                charttype=request.charttype,
+                language=request.language
+            )
+            return json_data
+
         html_str = build_html(
             data=calc,
             panchanga=panchanga,
@@ -82,10 +103,11 @@ async def generate_kundali(request: KundaliRequest):
             kaal_sarp=kaal_sarp,
             mangal=mangal,
             jaimini_karakas=jaimini_karakas,
-            charttype=request.charttype
+            charttype=request.charttype,
+            language=request.language
         )
         
-        return html_str
+        return HTMLResponse(content=html_str)
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))

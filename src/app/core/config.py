@@ -28,12 +28,13 @@ class Settings(BaseSettings):
     # Security
     SECRET_KEY: str = "a_very_secret_key_change_in_production"
     ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 14400
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
     
     # Razorpay
-    RAZORPAY_KEY_ID: str = "test_key_id"
-    RAZORPAY_KEY_SECRET: str = "test_key_secret"
+    RAZORPAY_KEY_ID: str = "rzp_test_TFPKRhkm0JrKAw"
+    RAZORPAY_KEY_SECRET: str = "n5ePGtiZ6CMVga71Roe19TGW"
+
     
     # Agora
     AGORA_APP_ID: str = "placeholder_agora_app_id"

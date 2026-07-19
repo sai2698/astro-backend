@@ -35,22 +35,9 @@ app.include_router(admin_web.router, prefix="/admin", tags=["admin"])
 def root():
     return {"message": "Welcome to Astrology App API"}
 
-# # Create static directory if it doesn't exist
-# static_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "static")
-# uploads_dir = os.path.join(static_dir, "uploads")
-# os.makedirs(uploads_dir, exist_ok=True)
-
-# app.mount("/static", StaticFiles(directory=static_dir), name="static")
-
-
-
 # Create static directory if it doesn't exist
 static_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "static")
 uploads_dir = os.path.join(static_dir, "uploads")
-try:
-    os.makedirs(uploads_dir, exist_ok=True)
-except OSError:
-    pass  # Serverless environments like Vercel have read-only filesystems
+os.makedirs(uploads_dir, exist_ok=True)
 
-if os.path.isdir(static_dir):
-    app.mount("/static", StaticFiles(directory=static_dir), name="static")
+app.mount("/static", StaticFiles(directory=static_dir), name="static")

@@ -1,4 +1,5 @@
 import uuid
+import razorpay
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
@@ -6,14 +7,17 @@ from sqlalchemy.orm import joinedload, selectinload
 from typing import List
 
 from app.core.database import get_db
-from app.models.appointment import Appointment as AppointmentModel, AstrologerAvailability, ServiceType
+from app.core.config import settings
+from app.models.appointment import Appointment as AppointmentModel, AstrologerAvailability, ServiceType, AstrologerProfile, PurohitaSeva, AstrologerService
 from app.models.user import User
-from app.schemas.appointment import Appointment as AppointmentSchema, AppointmentCreate
+from app.schemas.appointment import Appointment as AppointmentSchema, AppointmentCreate, AppointmentVerifyPayment
 from app.api import deps
 
 router = APIRouter()
 
-@router.post("/book", response_model=AppointmentSchema)
+rzp_client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
+
+@router.post("/create-order", response_model=AppointmentSchema)
 async def book_appointment(
     booking_in: AppointmentCreate,
     db: AsyncSession = Depends(get_db),
@@ -37,6 +41,48 @@ async def book_appointment(
         
     availability.is_booked = True
     
+    # Calculate price
+    astro_query = select(AstrologerProfile).filter(AstrologerProfile.user_id == booking_in.astrologer_id)
+    astro_result = await db.execute(astro_query)
+    astrologer = astro_result.scalars().first()
+    
+    price = 0.0
+    if booking_in.service_id:
+        service_query = select(ServiceType).filter(ServiceType.id == booking_in.service_id)
+        service_result = await db.execute(service_query)
+        service = service_result.scalars().first()
+        price = service.base_price if service else 0.0
+    elif booking_in.selected_seva:
+        seva_query = select(PurohitaSeva).filter(
+            PurohitaSeva.purohita_id == booking_in.astrologer_id,
+            PurohitaSeva.name == booking_in.selected_seva
+        )
+        seva_result = await db.execute(seva_query)
+        seva = seva_result.scalars().first()
+        price = seva.price if seva else (astrologer.price_per_session if astrologer else 0.0)
+    elif booking_in.selected_service:
+        astro_service_query = select(AstrologerService).filter(
+            AstrologerService.astrologer_id == booking_in.astrologer_id,
+            AstrologerService.name == booking_in.selected_service
+        )
+        astro_service_result = await db.execute(astro_service_query)
+        astro_service = astro_service_result.scalars().first()
+        price = astro_service.price if astro_service else (astrologer.price_per_session if astrologer else 0.0)
+    else:
+        price = astrologer.price_per_session if astrologer else 0.0
+
+    # Create Razorpay order
+    amount_in_paise = int(price * 100)
+    if settings.RAZORPAY_KEY_ID == "test_key_id" or settings.RAZORPAY_KEY_ID.startswith("test_key"):
+        rzp_order_id = f"mock_order_{booking_in.astrologer_id}_{current_user.id}"
+    else:
+        rzp_order = rzp_client.order.create({
+            "amount": amount_in_paise,
+            "currency": "INR",
+            "receipt": f"receipt_appt_{booking_in.astrologer_id}_{current_user.id}"
+        })
+        rzp_order_id = rzp_order['id']
+    
     # Generate mock Google Meet link
     meet_code = f"{uuid.uuid4().hex[:3]}-{uuid.uuid4().hex[:4]}-{uuid.uuid4().hex[:3]}"
     google_meet_link = f"https://meet.google.com/{meet_code}"
@@ -48,10 +94,12 @@ async def book_appointment(
         availability_id=booking_in.availability_id,
         scheduled_date=availability.specific_date,
         scheduled_start_time=availability.start_time,
-        status="pending",
+        status="payment_pending",
         google_meet_link=google_meet_link,
         selected_seva=booking_in.selected_seva,
-        selected_service=booking_in.selected_service
+        selected_service=booking_in.selected_service,
+        razorpay_order_id=rzp_order_id,
+        amount=price
     )
     
     db.add(appointment)
@@ -70,6 +118,40 @@ async def book_appointment(
         appointment_loaded.service_name = appointment_loaded.service.name
     
     return appointment_loaded
+
+@router.post("/verify-payment")
+async def verify_payment(
+    verify_in: AppointmentVerifyPayment,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(deps.get_current_user)
+):
+    if not (settings.RAZORPAY_KEY_ID == "test_key_id" or settings.RAZORPAY_KEY_ID.startswith("test_key")):
+        try:
+            rzp_client.utility.verify_payment_signature({
+                'razorpay_order_id': verify_in.razorpay_order_id,
+                'razorpay_payment_id': verify_in.razorpay_payment_id,
+                'razorpay_signature': verify_in.razorpay_signature
+            })
+        except razorpay.errors.SignatureVerificationError:
+            raise HTTPException(status_code=400, detail="Invalid payment signature")
+            
+    query = select(AppointmentModel).filter(
+        AppointmentModel.id == verify_in.appointment_id,
+        AppointmentModel.user_id == current_user.id
+    )
+    result = await db.execute(query)
+    appointment = result.scalars().first()
+    
+    if not appointment:
+        raise HTTPException(status_code=404, detail="Appointment not found")
+        
+    if appointment.status == "pending":
+        return {"message": "Already paid and scheduled"}
+        
+    appointment.status = "pending"
+    await db.commit()
+    
+    return {"message": "Payment verified and appointment scheduled"}
 
 @router.get("/me", response_model=List[AppointmentSchema])
 async def my_appointments(

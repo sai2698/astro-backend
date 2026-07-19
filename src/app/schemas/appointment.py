@@ -69,6 +69,12 @@ class AppointmentCreate(BaseModel):
     selected_seva: Optional[str] = None
     selected_service: Optional[str] = None
 
+class AppointmentVerifyPayment(BaseModel):
+    razorpay_order_id: str
+    razorpay_payment_id: str
+    razorpay_signature: str
+    appointment_id: int
+
 class ConsultationFileSchema(BaseModel):
     id: int
     name: str
@@ -91,6 +97,8 @@ class Appointment(BaseModel):
     report_file_url: Optional[str] = None
     selected_seva: Optional[str] = None
     selected_service: Optional[str] = None
+    razorpay_order_id: Optional[str] = None
+    amount: Optional[float] = None
     created_at: datetime
     
     user: Optional[UserSchema] = None
