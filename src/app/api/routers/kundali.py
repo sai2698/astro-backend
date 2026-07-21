@@ -3,6 +3,7 @@ from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
 from typing import Optional
 from datetime import datetime
+from fastapi import Query
 import traceback
 
 from kundali_gen.core.astro_calc import calc_all, get_julian_day, calc_planets, get_combust_status, find_moudya_cycles_for_year
@@ -113,9 +114,10 @@ async def generate_kundali(request: KundaliRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/moudya")
-async def get_current_moudya():
+async def get_current_moudya(year: Optional[int] = Query(None, description="Year to check Moudya cycles")):
     try:
         now_utc = datetime.utcnow()
+        target_year = year if year else now_utc.year
         jd = get_julian_day(now_utc)
         planets = calc_planets(jd)
         planets_with_combust = get_combust_status(planets)
@@ -124,7 +126,7 @@ async def get_current_moudya():
         result = {}
         for p in target_planets:
             if p in planets_with_combust:
-                cycles = find_moudya_cycles_for_year(now_utc.year, p)
+                cycles = find_moudya_cycles_for_year(target_year, p)
                 formatted_cycles = []
                 for c in cycles:
                     formatted_cycles.append({
