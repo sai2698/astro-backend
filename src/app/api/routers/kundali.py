@@ -5,7 +5,7 @@ from typing import Optional
 from datetime import datetime
 import traceback
 
-from kundali_gen.core.astro_calc import calc_all
+from kundali_gen.core.astro_calc import calc_all, get_julian_day, calc_planets, get_combust_status, find_moudya_cycles_for_year
 from kundali_gen.core.panchanga import get_full_panchanga
 from kundali_gen.core.divisional import calc_all_vargas
 from kundali_gen.core.dasha import generate_vimshottari_dasha
@@ -111,3 +111,35 @@ async def generate_kundali(request: KundaliRequest):
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/moudya")
+async def get_current_moudya():
+    try:
+        now_utc = datetime.utcnow()
+        jd = get_julian_day(now_utc)
+        planets = calc_planets(jd)
+        planets_with_combust = get_combust_status(planets)
+        
+        target_planets = ["Jupiter", "Venus", "Saturn", "Mars", "Mercury"]
+        result = {}
+        for p in target_planets:
+            if p in planets_with_combust:
+                cycles = find_moudya_cycles_for_year(now_utc.year, p)
+                formatted_cycles = []
+                for c in cycles:
+                    formatted_cycles.append({
+                        "start": c["start"].isoformat(),
+                        "end": c["end"].isoformat()
+                    })
+                
+                result[p] = {
+                    "combust": planets_with_combust[p]["combust"],
+                    "longitude": planets_with_combust[p]["longitude"],
+                    "retrograde": planets_with_combust[p]["retrograde"],
+                    "upcoming_cycles": formatted_cycles
+                }
+        return {"timestamp": now_utc.isoformat(), "moudya_status": result}
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+

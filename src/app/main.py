@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.api.routers import auth, users, courses, categories, orders, enrollments, astrologers, appointments, calls, admin_web, kundali
+from app.api.routers import auth, users, courses, categories, orders, enrollments, astrologers, appointments, calls, admin_web, kundali, calendar
 from app.core.config import settings
 from fastapi.staticfiles import StaticFiles
 import os
@@ -29,6 +29,7 @@ app.include_router(astrologers.router, prefix=f"{settings.API_V1_STR}/astrologer
 app.include_router(appointments.router, prefix=f"{settings.API_V1_STR}/appointments", tags=["appointments"])
 app.include_router(calls.router, prefix=f"{settings.API_V1_STR}/calls", tags=["calls"])
 app.include_router(kundali.router, prefix=f"{settings.API_V1_STR}/kundali", tags=["kundali"])
+app.include_router(calendar.router, prefix=f"{settings.API_V1_STR}/calendar", tags=["calendar"])
 app.include_router(admin_web.router, prefix="/admin", tags=["admin"])
 
 @app.get("/")

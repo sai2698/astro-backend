@@ -128,6 +128,9 @@ def get_combust_status(planets):
         if diff > 180:
             diff = 360 - diff
         limit = COMBUST_DEGREES.get(name, 15)
+        if data.get("retrograde"):
+            if name == "Venus": limit = 8
+            if name == "Mercury": limit = 12
         data["combust"] = diff <= limit
     return planets
 
@@ -186,3 +189,56 @@ def calc_all(dob_str, time_str, place_name, lat=None, lon=None, tz_str=None):
         "sripati_cusps": sripati_cusps,
         "cusps_placidus": cusps_placidus,
     }
+
+def find_moudya_cycles_for_year(year, planet_name):
+    from datetime import datetime, timedelta
+    start_dt = datetime(year, 1, 1)
+    end_dt = datetime(year, 12, 31, 23, 59, 59)
+    
+    sweep_start = datetime(year - 1, 6, 1)
+    sweep_end = datetime(year + 2, 6, 1)
+    
+    current = sweep_start
+    step = timedelta(days=1)
+    
+    cycles = []
+    in_cycle = False
+    cycle_start = None
+    
+    while current <= sweep_end:
+        jd = get_julian_day(current)
+        p = get_combust_status(calc_planets(jd))[planet_name]
+        
+        if p["combust"] and not in_cycle:
+            low = current - step
+            high = current
+            for _ in range(20):
+                mid = low + (high - low) / 2
+                pm = get_combust_status(calc_planets(get_julian_day(mid)))[planet_name]
+                if pm["combust"]: high = mid
+                else: low = mid
+            cycle_start = high
+            in_cycle = True
+            
+        elif not p["combust"] and in_cycle:
+            low = current - step
+            high = current
+            for _ in range(20):
+                mid = low + (high - low) / 2
+                pm = get_combust_status(calc_planets(get_julian_day(mid)))[planet_name]
+                if pm["combust"]: low = mid
+                else: high = mid
+            cycle_end = high
+            in_cycle = False
+            
+            if cycle_end >= start_dt and cycle_start <= end_dt:
+                cycles.append({"start": cycle_start, "end": cycle_end})
+            elif cycle_start > end_dt:
+                if len(cycles) == 0:
+                    cycles.append({"start": cycle_start, "end": cycle_end})
+                break
+                
+        current += step
+        
+    return cycles
+
