@@ -16,6 +16,8 @@ class Enrollment(Base):
     progress_percent = Column(Integer, default=0)
     is_active = Column(Boolean, default=False)
     status = Column(String, default="pending") # pending, approved, expired
+    expiry_date = Column(DateTime(timezone=True), nullable=True)
+    drive_permission_id = Column(String, nullable=True)
 
     user = relationship("User")
     course = relationship("Course")

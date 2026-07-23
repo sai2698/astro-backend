@@ -33,7 +33,7 @@ async def update_progress(
     course_id = lecture.section.course_id
     
     # 2. Verify the user is enrolled in this course and it is active
-    enrollment_query = select(EnrollmentModel).filter(
+    enrollment_query = select(EnrollmentModel).options(joinedload(EnrollmentModel.course)).filter(
         EnrollmentModel.user_id == current_user.id,
         EnrollmentModel.course_id == course_id,
         EnrollmentModel.is_active == True

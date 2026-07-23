@@ -21,6 +21,7 @@ from app.api.deps import get_admin_user_cookie
 from app.core.security import verify_password
 from app.core.config import settings
 from datetime import timedelta, date, time, datetime
+from app.services import drive_service
 
 router = APIRouter()
 
@@ -130,11 +131,20 @@ async def approve_enrollment(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_admin_user_cookie)
 ):
-    result = await db.execute(select(Enrollment).filter(Enrollment.id == enrollment_id))
+    result = await db.execute(
+        select(Enrollment)
+        .options(selectinload(Enrollment.user), selectinload(Enrollment.course))
+        .filter(Enrollment.id == enrollment_id)
+    )
     enrollment = result.scalars().first()
-    if enrollment:
+    if enrollment and enrollment.status != "approved":
         enrollment.status = "approved"
         enrollment.is_active = True
+        
+        if enrollment.course:
+            duration_days = enrollment.course.access_duration_days or 365
+            enrollment.expiry_date = datetime.now() + timedelta(days=duration_days)
+            
         await db.commit()
     return RedirectResponse(url="/admin/enrollments", status_code=status.HTTP_303_SEE_OTHER)
 
@@ -186,6 +196,8 @@ async def create_course(
     price: float = Form(0.0),
     discount_price: float = Form(None),
     thumbnail_url: str = Form(None),
+    drive_folder_id: str = Form(None),
+    access_duration_days: int = Form(365),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_admin_user_cookie)
 ):
@@ -195,6 +207,8 @@ async def create_course(
         price=price,
         discount_price=discount_price,
         thumbnail_url=thumbnail_url,
+        drive_folder_id=drive_folder_id,
+        access_duration_days=access_duration_days,
         instructor_id=current_user.id
     )
     db.add(new_course)
@@ -233,6 +247,8 @@ async def edit_course_post(
     price: float = Form(0.0),
     discount_price: float = Form(None),
     thumbnail_url: str = Form(None),
+    drive_folder_id: str = Form(None),
+    access_duration_days: int = Form(365),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_admin_user_cookie)
 ):
@@ -246,6 +262,8 @@ async def edit_course_post(
     course.price = price
     course.discount_price = discount_price
     course.thumbnail_url = thumbnail_url
+    course.drive_folder_id = drive_folder_id
+    course.access_duration_days = access_duration_days
     
     await db.commit()
     return RedirectResponse(url="/admin/courses", status_code=status.HTTP_303_SEE_OTHER)

@@ -31,6 +31,8 @@ class Course(Base):
     total_students = Column(Integer, default=0)
     total_duration_minutes = Column(Integer, default=0)
     is_published = Column(Boolean, default=False)
+    drive_folder_id = Column(String, nullable=True)
+    access_duration_days = Column(Integer, default=365)
 
     category = relationship("Category", back_populates="courses")
     instructor = relationship("User")

@@ -278,7 +278,12 @@ class KundaliRenderer:
                 rx_comb = "-"
             else:
                 data = planets[p]
-                rx_comb = "(R)" if data.get("retrograde") else ("(C)" if data.get("combust") else "-")
+                r_str = "(R)" if data.get("retrograde") else ""
+                c_str = "(C)" if data.get("combust") else ""
+                if r_str and c_str:
+                    rx_comb = "(R, C)"
+                else:
+                    rx_comb = r_str or c_str or "-"
             rows.append([
                 p if p != "Ascendant" else "Ascendant",
                 rx_comb,

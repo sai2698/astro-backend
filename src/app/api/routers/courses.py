@@ -11,6 +11,8 @@ from app.models.enrollment import Enrollment
 from app.models.user import User
 from app.schemas.course import Course, CourseCreate, CourseUpdate, CourseDetail, CourseReview, CourseReviewCreate
 from app.api import deps
+from app.services import drive_service
+import re
 
 router = APIRouter()
 
@@ -123,6 +125,42 @@ async def get_course(
     setattr(course, "is_enrolled", is_enrolled)
     setattr(course, "enrollment_status", enrollment_status)
     return course
+
+@router.get("/lectures/{lecture_id}/token")
+async def get_lecture_token(
+    lecture_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(deps.get_current_user)
+):
+    from app.models.course import Lecture
+    result = await db.execute(select(Lecture).options(selectinload(Lecture.section).selectinload(Lecture.section.property.mapper.class_.course)).filter(Lecture.id == lecture_id))
+    lecture = result.scalars().first()
+    if not lecture:
+        raise HTTPException(status_code=404, detail="Lecture not found")
+        
+    has_access = lecture.is_preview
+    if not has_access:
+        enroll_res = await db.execute(select(Enrollment).filter(
+            Enrollment.user_id == current_user.id,
+            Enrollment.course_id == lecture.section.course.id,
+            Enrollment.is_active == True
+        ))
+        if enroll_res.scalars().first():
+            has_access = True
+            
+    if not has_access:
+        raise HTTPException(status_code=403, detail="Not enrolled or access expired")
+        
+    match = re.search(r'/file/d/([a-zA-Z0-9_-]+)', lecture.video_url or "") or re.search(r'id=([a-zA-Z0-9_-]+)', lecture.video_url or "")
+    if not match:
+        raise HTTPException(status_code=400, detail="Not a valid Google Drive video")
+        
+    file_id = match.group(1)
+    access_token = drive_service.get_access_token()
+    if not access_token:
+        raise HTTPException(status_code=500, detail="Backend Drive API unconfigured")
+        
+    return {"token": access_token, "fileId": file_id}
 
 @router.post("/", response_model=Course)
 async def create_course(

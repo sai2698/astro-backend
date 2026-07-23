@@ -19,6 +19,9 @@ class UserCreate(UserBase):
 class UserUpdate(UserBase):
     pass
 
+class GoogleToken(BaseModel):
+    id_token: str
+
 class UserInDBBase(UserBase):
     id: int
     role: str

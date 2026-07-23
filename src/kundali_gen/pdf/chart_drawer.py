@@ -140,7 +140,10 @@ def planets_to_houses(planets_data, ascendant_data, varga_signs=None):
             abbr = short_map.get(p, p[:2])
             retro = planets_data.get(p, {}).get("retrograde", False)
             combust = planets_data.get(p, {}).get("combust", False)
-            suffix = " ®" if retro else (" ©" if combust else "")
+            suffix = ""
+            if retro: suffix += "®"
+            if combust: suffix += "©"
+            if suffix: suffix = " " + suffix
             houses[house].append(abbr + suffix)
     else:
         for p in planet_names:
@@ -148,7 +151,10 @@ def planets_to_houses(planets_data, ascendant_data, varga_signs=None):
             abbr = short_map.get(p, p[:2])
             retro = planets_data[p].get("retrograde", False)
             combust = planets_data[p].get("combust", False)
-            suffix = " ®" if retro else (" ©" if combust else "")
+            suffix = ""
+            if retro: suffix += "®"
+            if combust: suffix += "©"
+            if suffix: suffix = " " + suffix
             houses[house].append(abbr + suffix)
 
     return houses

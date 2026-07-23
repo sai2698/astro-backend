@@ -49,7 +49,15 @@ def build_json(data, panchanga, planets, ascendant, all_vargas,
     planets_translated = []
     for p in order:
         pdata = ascendant if p == "Ascendant" else planets[p]
-        rx = "-" if p == "Ascendant" else (t("(R)", language) if pdata.get("retrograde") else (t("(C)", language) if pdata.get("combust") else "-"))
+        if p == "Ascendant":
+            rx = "-"
+        else:
+            r_str = t("(R)", language) if pdata.get("retrograde") else ""
+            c_str = t("(C)", language) if pdata.get("combust") else ""
+            if r_str and c_str:
+                rx = f"{r_str}, {c_str}"
+            else:
+                rx = r_str or c_str or "-"
         nak_idx = pdata["nakshatra_idx"]
         pada = pdata["pada"]
         nak = NAKSHATRAS[nak_idx]

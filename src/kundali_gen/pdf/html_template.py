@@ -171,7 +171,10 @@ def _planets_to_signs(planets, ascendant, varga_signs=None):
             abbr = short_map.get(p, p[:2]) if p != "Ascendant" else "Asc"
             retro = planets.get(p, {}).get("retrograde", False) if p != "Ascendant" else False
             combust = planets.get(p, {}).get("combust", False) if p != "Ascendant" else False
-            suffix = " &reg;" if retro else (" &copy;" if combust else "")
+            suffix = ""
+            if retro: suffix += "&reg;"
+            if combust: suffix += "&copy;"
+            if suffix: suffix = " " + suffix
             color = PLANET_COLORS.get(p, "#000")
             signs[p_sign].append((abbr + suffix, color))
     else:
@@ -189,7 +192,10 @@ def _planets_to_signs(planets, ascendant, varga_signs=None):
                 abbr = short_map.get(p, p[:2])
                 retro = pdata.get("retrograde", False)
                 combust = pdata.get("combust", False)
-                suffix = " &reg;" if retro else (" &copy;" if combust else "")
+                suffix = ""
+                if retro: suffix += "&reg;"
+                if combust: suffix += "&copy;"
+                if suffix: suffix = " " + suffix
                 color = PLANET_COLORS.get(p, "#000")
                 signs[sign_idx].append((f"{abbr} {deg_str}{suffix}", color))
                 
@@ -407,7 +413,15 @@ def build_planets(planets, ascendant, lang="en"):
     rows = []
     for p in order:
         data = ascendant if p == "Ascendant" else planets[p]
-        rx = "-" if p == "Ascendant" else (t("(R)", lang) if data.get("retrograde") else (t("(C)", lang) if data.get("combust") else "-"))
+        if p == "Ascendant":
+            rx = "-"
+        else:
+            r_str = t("(R)", lang) if data.get("retrograde") else ""
+            c_str = t("(C)", lang) if data.get("combust") else ""
+            if r_str and c_str:
+                rx = f"{r_str}, {c_str}"
+            else:
+                rx = r_str or c_str or "-"
         rows.append([t(p, lang), rx, t(SIGNS[data["sign_idx"]], lang), data["dms"],
                      str(planets[p].get("house", "-")) if p != "Ascendant" else "-"])
     t1 = _data_table([t("Planet", lang), t("Rx/Comb", lang), t("Sign", lang), t("Deg/Min/Sec", lang), t("House", lang)], rows)
